@@ -4,676 +4,382 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>A&R Scouting Dashboard</title>
-  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  
-  <!-- Firebase SDK -->
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
-  
-  <!-- React -->
   <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'DM Sans', -apple-system, sans-serif; background: linear-gradient(135deg, #0a0a0f, #121218, #0d0d12); min-height: 100vh; color: #e4e4e7; }
-    input:focus { outline: none; border-color: rgba(59,130,246,0.5) !important; }
-    ::-webkit-scrollbar { width: 8px; }
-    ::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); }
-    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 4px; }
-    .loading { display: flex; align-items: center; justify-content: center; min-height: 100vh; font-size: 18px; color: #71717a; }
-    .config-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.95); display: flex; align-items: center; justify-content: center; padding: 20px; z-index: 9999; }
-    .config-box { background: #18181b; border: 1px solid rgba(255,255,255,0.1); border-radius: 16px; padding: 32px; max-width: 600px; width: 100%; }
-    .config-box h2 { font-size: 20px; margin-bottom: 8px; }
-    .config-box p { color: #71717a; font-size: 14px; margin-bottom: 24px; line-height: 1.6; }
-    .config-box textarea { width: 100%; height: 200px; padding: 16px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: rgba(0,0,0,0.3); color: #fff; font-family: monospace; font-size: 12px; margin-bottom: 16px; resize: vertical; }
-    .config-box button { width: 100%; padding: 14px; border-radius: 8px; border: none; background: linear-gradient(135deg, #3b82f6, #2563eb); color: #fff; font-size: 14px; font-weight: 600; cursor: pointer; }
-    .config-box button:disabled { opacity: 0.5; cursor: not-allowed; }
-    .config-box .error { color: #ef4444; font-size: 13px; margin-bottom: 16px; padding: 12px; background: rgba(239,68,68,0.1); border-radius: 8px; }
-    .config-box .helper { font-size: 12px; color: #52525b; margin-top: 12px; }
-    .status-bar { position: fixed; bottom: 20px; right: 20px; padding: 8px 16px; border-radius: 8px; font-size: 12px; z-index: 100; display: flex; align-items: center; gap: 8px; }
-    .status-bar.connected { background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); color: #10b981; }
-    .status-bar.disconnected { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); color: #ef4444; }
-    .status-bar.saving { background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.3); color: #3b82f6; }
+    :root{--bg-1:#fafafa;--bg-2:#fff;--bg-3:#f4f4f5;--bg-h:#e4e4e7;--tx-1:#18181b;--tx-2:#52525b;--tx-3:#a1a1aa;--bd:#e4e4e7;--bd-l:#f4f4f5;--acc:#2563eb;--acc-l:#dbeafe;--grn:#10b981;--grn-l:#d1fae5;--red:#ef4444;--red-l:#fee2e2;--prp:#8b5cf6;--prp-l:#ede9fe;--org:#f59e0b;--org-l:#fef3c7}
+    [data-theme="dark"]{--bg-1:#09090b;--bg-2:#18181b;--bg-3:#27272a;--bg-h:#3f3f46;--tx-1:#fafafa;--tx-2:#a1a1aa;--tx-3:#71717a;--bd:#27272a;--bd-l:#3f3f46;--acc:#3b82f6;--acc-l:rgba(59,130,246,.15);--grn:#10b981;--grn-l:rgba(16,185,129,.15);--red:#ef4444;--red-l:rgba(239,68,68,.15);--prp:#a78bfa;--prp-l:rgba(139,92,246,.15);--org:#fbbf24;--org-l:rgba(251,191,36,.15)}
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Plus Jakarta Sans',-apple-system,sans-serif;background:var(--bg-1);color:var(--tx-1);min-height:100vh;transition:background .3s,color .3s}
+    input,button,select{font-family:inherit}input:focus{outline:none;border-color:var(--acc)!important}
+    ::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--bd);border-radius:3px}
+    .ld{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px}
+    .sp{width:36px;height:36px;border:3px solid var(--bd);border-top-color:var(--acc);border-radius:50%;animation:spin .8s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}.fi{animation:fadeIn .4s ease-out forwards}
+    .mono{font-family:'JetBrains Mono',monospace}
   </style>
 </head>
 <body>
-<div id="root"><div class="loading">Loading...</div></div>
-
+<div id="root"><div class="ld"><div class="sp"></div><span style="color:var(--tx-3);font-size:14px">Loading...</span></div></div>
 <script>
-// ============================================================================
-// FIREBASE CONFIGURATION
-// ============================================================================
-
-// Check for saved config or show setup modal
-let firebaseConfig = null;
-let db = null;
-
-// Your Firebase config - pre-configured
-const FIREBASE_CONFIG = {
-  apiKey: "AIzaSyAI2Nrt4PsnOB0DyLa4yrWYyY39Oblzcec",
-  authDomain: "ar-scouting-dashboard.firebaseapp.com",
-  projectId: "ar-scouting-dashboard",
-  storageBucket: "ar-scouting-dashboard.firebasestorage.app",
-  messagingSenderId: "290834477922",
-  appId: "1:290834477922:web:979499b51ba18607f0f23b"
+const FIREBASE_CONFIG={apiKey:"AIzaSyAI2Nrt4PsnOB0DyLa4yrWYyY39Oblzcec",authDomain:"ar-scouting-dashboard.firebaseapp.com",projectId:"ar-scouting-dashboard",storageBucket:"ar-scouting-dashboard.firebasestorage.app",messagingSenderId:"290834477922",appId:"1:290834477922:web:979499b51ba18607f0f23b"};
+let db=null;
+function initFirebase(){try{firebase.initializeApp(FIREBASE_CONFIG);db=firebase.firestore();return true}catch(e){console.error(e);return false}}
+const FS={
+  async load(){if(!db)return[];try{const s=await db.collection('artists').get();return s.docs.map(d=>({id:d.id,...d.data()}))}catch(e){console.error(e);return[]}},
+  async save(a){if(!db)return false;try{const{id,...data}=a;await db.collection('artists').doc(id).set(data,{merge:true});return true}catch(e){console.error(e);return false}},
+  async del(id){if(!db)return false;try{await db.collection('artists').doc(id).delete();return true}catch(e){console.error(e);return false}},
+  sub(cb){if(!db)return()=>{};return db.collection('artists').onSnapshot(s=>{cb(s.docs.map(d=>({id:d.id,...d.data()})))},e=>console.error(e))}
 };
-
-function getStoredConfig() {
-  // Return the pre-configured config, or check localStorage for any overrides
-  try {
-    const stored = localStorage.getItem('ar-dashboard-firebase-config');
-    return stored ? JSON.parse(stored) : FIREBASE_CONFIG;
-  } catch {
-    return FIREBASE_CONFIG;
-  }
-}
-
-function saveConfig(config) {
-  localStorage.setItem('ar-dashboard-firebase-config', JSON.stringify(config));
-}
-
-function initializeFirebase(config) {
-  try {
-    firebase.initializeApp(config);
-    db = firebase.firestore();
-    return true;
-  } catch (error) {
-    console.error('Firebase init error:', error);
-    return false;
-  }
-}
-
-// ============================================================================
-// FIRESTORE OPERATIONS
-// ============================================================================
-
-const FirestoreOps = {
-  // Load all artists
-  async loadArtists() {
-    if (!db) return [];
-    try {
-      const snapshot = await db.collection('artists').get();
-      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    } catch (error) {
-      console.error('Load error:', error);
-      return [];
-    }
-  },
-
-  // Save single artist
-  async saveArtist(artist) {
-    if (!db) return false;
-    try {
-      await db.collection('artists').doc(artist.id).set(artist);
-      return true;
-    } catch (error) {
-      console.error('Save error:', error);
-      return false;
-    }
-  },
-
-  // Delete artist
-  async deleteArtist(artistId) {
-    if (!db) return false;
-    try {
-      await db.collection('artists').doc(artistId).delete();
-      return true;
-    } catch (error) {
-      console.error('Delete error:', error);
-      return false;
-    }
-  },
-
-  // Save daily snapshot (for historical tracking)
-  async saveSnapshot(artistId, data) {
-    if (!db) return false;
-    try {
-      const date = new Date().toISOString().split('T')[0];
-      const snapshotId = `${date}_${artistId}`;
-      await db.collection('snapshots').doc(snapshotId).set({
-        date,
-        artistId,
-        ...data,
-        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-      });
-      return true;
-    } catch (error) {
-      console.error('Snapshot error:', error);
-      return false;
-    }
-  },
-
-  // Subscribe to real-time updates
-  subscribeToArtists(callback) {
-    if (!db) return () => {};
-    return db.collection('artists').onSnapshot(snapshot => {
-      const artists = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      callback(artists);
-    }, error => {
-      console.error('Subscription error:', error);
-    });
-  }
-};
-
-// Make available globally for React
-window.FirestoreOps = FirestoreOps;
-window.getStoredConfig = getStoredConfig;
-window.saveConfig = saveConfig;
-window.initializeFirebase = initializeFirebase;
-window.db = db;
+window.FS=FS;
 </script>
-
 <script type="text/babel">
-const {useState,useEffect,useMemo,useCallback}=React;
+const{useState,useEffect,useMemo}=React;
 
-// ============================================================================
-// UTILITIES
-// ============================================================================
-const fmt=(n)=>!n?'0':n>=1e6?(n/1e6).toFixed(1)+'M':n>=1e3?(n/1e3).toFixed(1)+'K':n.toString();
-const vel=(h,d=1)=>{if(!h||h.length<d+1)return{abs:0,pct:0};const c=h[h.length-1]?.v||0,p=h[h.length-1-d]?.v||0;return{abs:c-p,pct:p?(((c-p)/p)*100):0}};
-const socScore=(t,i)=>{const ts=t>=7?10:t>=5?8:t>=3?6:t>=1?4:0,is=i>=7?10:i>=5?8:i>=3?6:i>=1?4:0;return((ts*.5)+(is*.35)+5*.15).toFixed(1)};
-const compScore=(a)=>{const sv=Object.values(a.sm||{}).reduce((s,x)=>s+(vel(x.h?.st).abs||0),0);const uv=Object.values(a.sm||{}).reduce((s,x)=>s+(vel(x.h?.ug).abs||0),0);const fg=(vel(a.h?.tk).abs||0)+(vel(a.h?.ig).abs||0);const ss=parseFloat(a.m?.ss||0);return(Math.min(sv/50000,10)*.4+Math.min(uv/1000,10)*.3+Math.min(fg/5000,10)*.2+ss*.1).toFixed(1)};
+// Utilities
+const fmt=n=>{if(!n||n===0)return'0';if(n>=1e9)return(n/1e9).toFixed(1)+'B';if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).toFixed(1)+'K';return n.toLocaleString()};
+const fmtD=n=>{if(!n||n===0)return'0';const a=Math.abs(n),p=n>=0?'+':'-';if(a>=1e6)return p+(a/1e6).toFixed(1)+'M';if(a>=1e3)return p+(a/1e3).toFixed(1)+'K';return p+a.toLocaleString()};
+const vel=(h,d=1)=>{if(!h||h.length<2)return 0;return(h[h.length-1]?.v||0)-(h[Math.max(0,h.length-1-d)]?.v||0)};
+const totStr=a=>a.sm?Object.values(a.sm).reduce((s,x)=>s+(x.st||0),0):0;
+const totUGC=a=>a.sm?Object.values(a.sm).reduce((s,x)=>s+(x.ug||0),0):0;
+const dayStr=a=>a.sm?Object.values(a.sm).reduce((s,x)=>s+vel(x.h?.st,1),0):0;
+const dayUGC=a=>a.sm?Object.values(a.sm).reduce((s,x)=>s+vel(x.h?.ug,1),0):0;
 
-// ============================================================================
-// ICONS
-// ============================================================================
+// Icons
 const I={
-  home:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>,
-  users:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>,
+  sun:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>,
+  moon:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>,
   plus:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
-  edit:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
-  up:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>,
-  down:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>,
-  ext:<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>,
-  chev:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>,
+  search:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>,
+  up:<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="18 15 12 9 6 15"/></svg>,
+  down:<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="6 9 12 15 18 9"/></svg>,
+  ext:<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>,
+  chev:<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6"/></svg>,
   back:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>,
-  alert:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>,
-  fire:<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 23a7 7 0 0 1-7-7c0-3 2-6 4-8 0 3 2 5 4 5s3-1 3-3c2 2 3 4 3 6a7 7 0 0 1-7 7z"/></svg>,
-  trash:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>,
-  x:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
-  cloud:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>,
-  check:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"/></svg>,
-  settings:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>,
+  trash:<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>,
+  x:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
+  fire:<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 23c-4.97 0-9-3.58-9-8 0-3.31 2.69-6.14 5-8 0 2.76 2.24 5 5 5s4-1.34 4-3c1.5 1.5 3 4 3 6 0 4.42-4.03 8-8 8z"/></svg>,
+  sp:<svg width="15" height="15" viewBox="0 0 24 24" fill="#1DB954"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02z"/></svg>,
+  tk:<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64V9.4A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4z"/></svg>,
+  ig:<svg width="15" height="15" viewBox="0 0 24 24" fill="#E1306C"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0z"/></svg>,
+  yt:<svg width="15" height="15" viewBox="0 0 24 24" fill="#FF0000"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/></svg>,
+  am:<svg width="15" height="15" viewBox="0 0 24 24" fill="#FA243C"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424c-.18.295-.563.387-.857.207-2.35-1.434-5.305-1.76-8.786-.963-.335.077-.67-.133-.746-.47-.077-.334.132-.67.47-.745 3.808-.87 7.076-.496 9.712 1.115.293.18.386.563.206.856z"/></svg>,
 };
 
-const PI={
-  sp:<svg width="14" height="14" viewBox="0 0 24 24" fill="#1DB954"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02z"/></svg>,
-  tk:<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64V9.4A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4z"/></svg>,
-  ig:<svg width="14" height="14" viewBox="0 0 24 24" fill="#E1306C"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0z"/></svg>,
-  yt:<svg width="14" height="14" viewBox="0 0 24 24" fill="#FF0000"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814z"/></svg>,
-  am:<svg width="14" height="14" viewBox="0 0 24 24" fill="#FA243C"><path d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10 10-4.477 10-10S17.523 2 12 2zm4.586 14.424c-.18.295-.563.387-.857.207-2.35-1.434-5.305-1.76-8.786-.963-.335.077-.67-.133-.746-.47-.077-.334.132-.67.47-.745 3.808-.87 7.076-.496 9.712 1.115.293.18.386.563.206.856zm1.223-2.723c-.227.37-.71.485-1.08.259-2.687-1.652-6.785-2.13-9.965-1.166-.413.127-.848-.106-.973-.517-.125-.413.108-.848.52-.973 3.632-1.102 8.147-.568 11.234 1.328.37.226.485.71.264 1.079zm.105-2.835c-3.223-1.914-8.54-2.09-11.618-1.156-.493.15-1.016-.13-1.166-.623-.148-.495.13-1.016.625-1.166 3.532-1.073 9.404-.866 13.115 1.337.445.264.59.838.327 1.282-.264.443-.838.59-1.283.326z"/></svg>,
+// Components
+const Spark=({data,h=26})=>{
+  if(!data||data.length<2)return<div style={{width:70,height:h}}/>;
+  const vs=data.map(d=>d.v||0),mn=Math.min(...vs),mx=Math.max(...vs),rg=mx-mn||1,w=70;
+  const pts=vs.map((v,i)=>`${(i/(vs.length-1))*w},${h-((v-mn)/rg)*(h-4)-2}`).join(' ');
+  const up=vs[vs.length-1]>=vs[0];
+  const c=up?'var(--grn)':'var(--red)';
+  return<svg width={w} height={h}><polygon points={`0,${h} ${pts} ${w},${h}`} fill={c} fillOpacity=".12"/><polyline points={pts} fill="none" stroke={c} strokeWidth="2" strokeLinecap="round"/></svg>;
 };
 
-// ============================================================================
-// COMPONENTS
-// ============================================================================
-const Spark=({data,color='#10b981',h=28})=>{if(!data||data.length<2)return <div style={{width:70,height:h}}/>;const vs=data.map(d=>d.v);const mn=Math.min(...vs),mx=Math.max(...vs),rg=mx-mn||1;const w=70;const pts=data.map((d,i)=>`${(i/(data.length-1))*w},${h-((d.v-mn)/rg)*(h-4)-2}`).join(' ');return <svg width={w} height={h}><polygon points={`0,${h} ${pts} ${w},${h}`} fill={color} fillOpacity=".15"/><polyline points={pts} fill="none" stroke={color} strokeWidth="1.5"/></svg>};
-const Vel=({v,s='n'})=>{const p=v>=0;return <div style={{display:'flex',alignItems:'center',gap:3,color:p?'#10b981':'#ef4444',fontSize:s==='s'?11:12,fontWeight:500}}>{p?I.up:I.down}<span>{p?'+':''}{fmt(v)}</span></div>};
-const Badge=({t,children})=>{const c=t==='hot'?{bg:'rgba(239,68,68,.15)',b:'rgba(239,68,68,.3)',t:'#ef4444'}:{bg:'rgba(16,185,129,.15)',b:'rgba(16,185,129,.3)',t:'#10b981'};return <span style={{display:'inline-flex',alignItems:'center',gap:3,padding:'2px 6px',borderRadius:4,fontSize:10,fontWeight:600,textTransform:'uppercase',background:c.bg,border:`1px solid ${c.b}`,color:c.t}}>{t==='hot'&&I.fire}{children}</span>};
-
-// Styles
-const S={
-  nav:{position:'sticky',top:0,zIndex:100,background:'rgba(10,10,15,.9)',backdropFilter:'blur(20px)',borderBottom:'1px solid rgba(255,255,255,.06)',padding:'10px 16px'},
-  navIn:{maxWidth:1200,margin:'0 auto',display:'flex',alignItems:'center',justifyContent:'space-between',flexWrap:'wrap',gap:10},
-  logo:{fontSize:16,fontWeight:700,background:'linear-gradient(135deg,#fff,#a1a1aa)',WebkitBackgroundClip:'text',WebkitTextFillColor:'transparent'},
-  btn:(a)=>({display:'flex',alignItems:'center',gap:5,padding:'7px 12px',borderRadius:7,border:'none',background:a?'rgba(255,255,255,.1)':'transparent',color:a?'#fff':'#71717a',fontSize:12,fontWeight:500,cursor:'pointer'}),
-  pBtn:{display:'flex',alignItems:'center',gap:5,padding:'7px 14px',borderRadius:7,border:'none',background:'linear-gradient(135deg,#3b82f6,#2563eb)',color:'#fff',fontSize:12,fontWeight:600,cursor:'pointer'},
-  sBtn:{display:'flex',alignItems:'center',gap:5,padding:'7px 14px',borderRadius:7,border:'1px solid rgba(16,185,129,.3)',background:'rgba(16,185,129,.1)',color:'#10b981',fontSize:12,fontWeight:600,cursor:'pointer'},
-  main:{maxWidth:1200,margin:'0 auto',padding:'20px 16px'},
-  card:{borderRadius:14,background:'rgba(255,255,255,.02)',border:'1px solid rgba(255,255,255,.06)',overflow:'hidden'},
-  inp:{width:'100%',padding:'10px 12px',borderRadius:8,border:'1px solid rgba(255,255,255,.1)',background:'rgba(0,0,0,.3)',color:'#fff',fontSize:13,outline:'none'},
-  modal:{position:'fixed',inset:0,background:'rgba(0,0,0,.85)',backdropFilter:'blur(8px)',display:'flex',alignItems:'center',justifyContent:'center',padding:16,zIndex:1000},
-  modalC:{width:'100%',maxWidth:460,maxHeight:'90vh',overflow:'auto',borderRadius:16,background:'#18181b',border:'1px solid rgba(255,255,255,.1)'},
+const Delta=({v,sz='md'})=>{
+  const pos=v>=0,zero=v===0;
+  const s={sm:{fs:11,p:'2px 6px'},md:{fs:12,p:'3px 8px'}}[sz];
+  return<span className="mono" style={{display:'inline-flex',alignItems:'center',gap:2,padding:s.p,borderRadius:6,fontSize:s.fs,fontWeight:600,background:zero?'var(--bg-3)':pos?'var(--grn-l)':'var(--red-l)',color:zero?'var(--tx-3)':pos?'var(--grn)':'var(--red)'}}>{!zero&&(pos?I.up:I.down)}{fmtD(v)}</span>;
 };
 
-// ============================================================================
-// FIREBASE CONFIG MODAL
-// ============================================================================
-function ConfigModal({onConfigured}) {
-  const [config, setConfig] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
+const PBadge=({p,url})=>{
+  if(!url)return null;
+  const icons={sp:I.sp,tk:I.tk,ig:I.ig,yt:I.yt,am:I.am};
+  const labels={sp:'Spotify',tk:'TikTok',ig:'Instagram',yt:'YouTube',am:'Apple'};
+  return<a href={url} target="_blank" rel="noopener" style={{display:'inline-flex',alignItems:'center',gap:5,padding:'5px 9px',borderRadius:7,background:'var(--bg-3)',color:'var(--tx-2)',fontSize:11,fontWeight:500,textDecoration:'none',transition:'background .15s'}} onMouseOver={e=>e.currentTarget.style.background='var(--bg-h)'} onMouseOut={e=>e.currentTarget.style.background='var(--bg-3)'}>{icons[p]}{labels[p]}{I.ext}</a>;
+};
 
-  const handleSubmit = async () => {
-    setError('');
-    setLoading(true);
-    
-    try {
-      // Try to parse the config
-      let parsed;
-      
-      // Handle different formats user might paste
-      const cleaned = config
-        .replace(/const\s+firebaseConfig\s*=\s*/, '')
-        .replace(/;?\s*$/, '')
-        .trim();
-      
-      parsed = JSON.parse(cleaned.replace(/(\w+):/g, '"$1":').replace(/'/g, '"'));
-      
-      // Validate required fields
-      if (!parsed.apiKey || !parsed.projectId) {
-        throw new Error('Missing required fields (apiKey, projectId)');
-      }
-      
-      // Try to initialize Firebase
-      if (window.initializeFirebase(parsed)) {
-        window.saveConfig(parsed);
-        onConfigured();
-      } else {
-        throw new Error('Failed to initialize Firebase');
-      }
-    } catch (err) {
-      setError(`Invalid config: ${err.message}. Make sure you paste the entire firebaseConfig object.`);
-    }
-    
-    setLoading(false);
-  };
-
-  return (
-    <div className="config-modal">
-      <div className="config-box">
-        <h2>🔥 Connect to Firebase</h2>
-        <p>
-          To sync your data across devices and share with your team, paste your Firebase configuration below.
-          <br/><br/>
-          Don't have one yet? Follow the <a href="https://console.firebase.google.com" target="_blank" style={{color:'#3b82f6'}}>Firebase setup guide</a>.
-        </p>
-        
-        {error && <div className="error">{error}</div>}
-        
-        <textarea
-          value={config}
-          onChange={e => setConfig(e.target.value)}
-          placeholder={`Paste your Firebase config here, e.g.:
-
-{
-  "apiKey": "AIzaSy...",
-  "authDomain": "your-project.firebaseapp.com",
-  "projectId": "your-project-id",
-  "storageBucket": "your-project.appspot.com",
-  "messagingSenderId": "123456789",
-  "appId": "1:123456789:web:abc123"
-}`}
-        />
-        
-        <button onClick={handleSubmit} disabled={loading || !config.trim()}>
-          {loading ? 'Connecting...' : 'Connect to Firebase'}
-        </button>
-        
-        <p className="helper">
-          Your config is stored locally in your browser and never sent anywhere except Firebase.
-        </p>
-      </div>
+const Stat=({label,value,delta,icon,color,spark})=>(
+  <div style={{padding:14,borderRadius:12,background:'var(--bg-2)',border:'1px solid var(--bd)'}}>
+    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:6}}>
+      <span style={{fontSize:10,fontWeight:600,color:'var(--tx-3)',textTransform:'uppercase',letterSpacing:'.5px'}}>{label}</span>
+      {icon&&<span style={{color}}>{icon}</span>}
     </div>
-  );
-}
-
-// ============================================================================
-// STATUS BAR
-// ============================================================================
-function StatusBar({status}) {
-  if (!status) return null;
-  return (
-    <div className={`status-bar ${status.type}`}>
-      {status.type === 'connected' && I.check}
-      {status.type === 'saving' && I.cloud}
-      {status.type === 'disconnected' && I.alert}
-      {status.message}
+    <div className="mono" style={{fontSize:24,fontWeight:700,color,marginBottom:6}}>{value}</div>
+    <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+      {delta!==undefined&&<Delta v={delta} sz="sm"/>}
+      {spark&&<Spark data={spark} h={20}/>}
     </div>
-  );
-}
+  </div>
+);
 
-// ============================================================================
-// MAIN APP
-// ============================================================================
-function App() {
-  const [configured, setConfigured] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [artists, setArtists] = useState([]);
-  const [view, setView] = useState('home');
-  const [sel, setSel] = useState(null);
-  const [showAdd, setShowAdd] = useState(false);
-  const [showEntry, setShowEntry] = useState(false);
-  const [entryIdx, setEntryIdx] = useState(0);
-  const [status, setStatus] = useState(null);
-  const [showSettings, setShowSettings] = useState(false);
+// Main App
+function App(){
+  const[artists,setArtists]=useState([]);
+  const[loading,setLoading]=useState(true);
+  const[sel,setSel]=useState(null);
+  const[showAdd,setShowAdd]=useState(false);
+  const[search,setSearch]=useState('');
+  const[theme,setTheme]=useState(()=>localStorage.getItem('ar-theme')||'dark');
 
-  // Check for existing config on mount - use pre-configured by default
-  useEffect(() => {
-    const config = window.getStoredConfig();
-    if (config && window.initializeFirebase(config)) {
-      setConfigured(true);
-    } else {
-      setLoading(false);
-    }
-  }, []);
+  useEffect(()=>{initFirebase();const unsub=FS.sub(d=>{setArtists(d);setLoading(false)});return()=>unsub()},[]);
+  useEffect(()=>{document.documentElement.setAttribute('data-theme',theme);localStorage.setItem('ar-theme',theme)},[theme]);
 
-  // Load artists and subscribe to updates once configured
-  useEffect(() => {
-    if (!configured) return;
-    
-    setStatus({type: 'saving', message: 'Loading...'});
-    
-    // Subscribe to real-time updates
-    const unsubscribe = window.FirestoreOps.subscribeToArtists((loadedArtists) => {
-      setArtists(loadedArtists);
-      setLoading(false);
-      setStatus({type: 'connected', message: 'Synced'});
-      
-      // Clear status after 2 seconds
-      setTimeout(() => setStatus(null), 2000);
-    });
-    
-    return () => unsubscribe();
-  }, [configured]);
+  const toggle=()=>setTheme(t=>t==='dark'?'light':'dark');
+  const save=async a=>await FS.save(a);
+  const add=async d=>{const n={...d,id:Date.now().toString(),sg:[],sm:{},h:{sf:[],tk:[],ig:[],yt:[]}};await save(n);setShowAdd(false)};
+  const del=async id=>{if(confirm('Remove this artist?')){await FS.del(id);if(sel?.id===id)setSel(null)}};
 
-  // Save artist to Firebase
-  const saveArtist = useCallback(async (artist) => {
-    setStatus({type: 'saving', message: 'Saving...'});
-    const success = await window.FirestoreOps.saveArtist(artist);
-    if (success) {
-      setStatus({type: 'connected', message: 'Saved'});
-      setTimeout(() => setStatus(null), 2000);
-    } else {
-      setStatus({type: 'disconnected', message: 'Save failed'});
-    }
-    return success;
-  }, []);
+  const filtered=useMemo(()=>{if(!search)return artists;const q=search.toLowerCase();return artists.filter(a=>a.n?.toLowerCase().includes(q))},[artists,search]);
+  const sorted=useMemo(()=>[...filtered].sort((a,b)=>totStr(b)-totStr(a)),[filtered]);
 
-  // Rankings calculation
-  const ranks = useMemo(() => {
-    const ws = artists.map(a => ({
-      ...a,
-      cs: parseFloat(compScore(a)),
-      sv: Object.values(a.sm || {}).reduce((s, x) => s + (vel(x.h?.st).abs || 0), 0),
-      uv: Object.values(a.sm || {}).reduce((s, x) => s + (vel(x.h?.ug).abs || 0), 0),
-    }));
-    const top = [...ws].sort((a, b) => b.cs - a.cs).slice(0, 10);
-    const songs = [];
-    artists.forEach(a => (a.sg || []).forEach(s => {
-      const m = a.sm?.[s.id];
-      if (m) {
-        const sv = vel(m.h?.st), uv = vel(m.h?.ug);
-        songs.push({...s, an: a.n, aid: a.id, st: m.st, ug: m.ug, sv: sv.abs, uv: uv.abs});
-      }
-    }));
-    const byStr = [...songs].sort((a, b) => b.sv - a.sv).slice(0, 10);
-    const byUgc = [...songs].sort((a, b) => b.uv - a.uv).slice(0, 10);
-    const alerts = songs.filter(s => s.uv >= 100 || s.sv >= 10000).map(s => ({
-      t: s.uv >= 1000 ? 'hot' : 'rising',
-      msg: s.uv >= 1000 ? `${s.t} crossed 1K UGC/day!` : s.uv >= 100 ? `${s.t} hit 100+ UGC/day` : `${s.t} gaining 10K+ streams/day`
-    }));
-    return {top, byStr, byUgc, alerts};
-  }, [artists]);
+  if(loading)return<div className="ld"><div className="sp"></div><span style={{color:'var(--tx-3)',fontSize:14}}>Loading...</span></div>;
 
-  // Add artist
-  const addA = async (d) => {
-    if (artists.length >= 25) { alert('Max 25'); return; }
-    const newArtist = {...d, id: Date.now().toString(), sg: [], sm: {}, h: {sf: [], tk: [], ig: []}};
-    await saveArtist(newArtist);
-    setShowAdd(false);
-  };
-
-  // Update artist
-  const updA = async (id, u) => {
-    const artist = artists.find(a => a.id === id);
-    if (artist) {
-      await saveArtist({...artist, ...u});
-    }
-  };
-
-  // Delete artist
-  const delA = async (id) => {
-    if (confirm('Remove?')) {
-      setStatus({type: 'saving', message: 'Deleting...'});
-      await window.FirestoreOps.deleteArtist(id);
-      if (sel?.id === id) { setSel(null); setView('artists'); }
-    }
-  };
-
-  // Reset config
-  const resetConfig = () => {
-    if (confirm('This will disconnect from Firebase. Continue?')) {
-      localStorage.removeItem('ar-dashboard-firebase-config');
-      window.location.reload();
-    }
-  };
-
-  // Show config modal if not configured
-  if (!configured) {
-    return <ConfigModal onConfigured={() => { setConfigured(true); setLoading(true); }} />;
-  }
-
-  // Show loading
-  if (loading) {
-    return <div className="loading">Loading your dashboard...</div>;
-  }
-
-  return (
-    <div>
-      <nav style={S.nav}>
-        <div style={S.navIn}>
-          <div style={{display:'flex',alignItems:'center',gap:20}}>
-            <h1 style={S.logo}>A&R Dashboard</h1>
-            <div style={{display:'flex',gap:3}}>
-              <button onClick={()=>{setView('home');setSel(null)}} style={S.btn(view==='home')}>{I.home} Home</button>
-              <button onClick={()=>{setView('artists');setSel(null)}} style={S.btn(view==='artists')}>{I.users} Artists</button>
-            </div>
+  return(
+    <div style={{minHeight:'100vh'}}>
+      {/* Header */}
+      <header style={{position:'sticky',top:0,zIndex:100,background:'var(--bg-2)',borderBottom:'1px solid var(--bd)',padding:'10px 20px'}}>
+        <div style={{maxWidth:1400,margin:'0 auto',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,flexWrap:'wrap'}}>
+          <div style={{display:'flex',alignItems:'center',gap:16}}>
+            <h1 style={{fontSize:17,fontWeight:700,display:'flex',alignItems:'center',gap:8}}><span style={{fontSize:22}}>🎵</span>A&R Dashboard</h1>
+            {sel&&<button onClick={()=>setSel(null)} style={{display:'flex',alignItems:'center',gap:5,padding:'7px 12px',borderRadius:8,border:'none',background:'var(--bg-3)',color:'var(--tx-2)',fontSize:12,fontWeight:500,cursor:'pointer'}}>{I.back}All Artists</button>}
           </div>
-          <div style={{display:'flex',gap:6}}>
-            <button onClick={()=>{setEntryIdx(0);setShowEntry(true)}} style={S.sBtn}>{I.edit} Daily Update</button>
-            <button onClick={()=>setShowAdd(true)} style={S.pBtn}>{I.plus} Add Artist</button>
-            <button onClick={resetConfig} style={{...S.btn(false),padding:'7px 10px'}} title="Reset Firebase connection">{I.settings}</button>
+          <div style={{display:'flex',alignItems:'center',gap:10}}>
+            {!sel&&<div style={{position:'relative'}}><span style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',color:'var(--tx-3)'}}>{I.search}</span><input type="text" placeholder="Search..." value={search} onChange={e=>setSearch(e.target.value)} style={{width:180,padding:'9px 10px 9px 36px',borderRadius:8,border:'1px solid var(--bd)',background:'var(--bg-3)',color:'var(--tx-1)',fontSize:13}}/></div>}
+            <button onClick={()=>setShowAdd(true)} style={{display:'flex',alignItems:'center',gap:5,padding:'9px 14px',borderRadius:8,border:'none',background:'var(--acc)',color:'#fff',fontSize:12,fontWeight:600,cursor:'pointer'}}>{I.plus}Add Artist</button>
+            <button onClick={toggle} style={{display:'flex',alignItems:'center',justifyContent:'center',width:38,height:38,borderRadius:8,border:'1px solid var(--bd)',background:'var(--bg-3)',color:'var(--tx-2)',cursor:'pointer'}} title={theme==='dark'?'Light mode':'Dark mode'}>{theme==='dark'?I.sun:I.moon}</button>
           </div>
         </div>
-      </nav>
+      </header>
 
-      <main style={S.main}>
-        {view==='home'&&<Home ranks={ranks} artists={artists} onSel={a=>{setSel(a);setView('detail')}}/>}
-        {view==='artists'&&<Artists artists={artists} onSel={a=>{setSel(a);setView('detail')}} onDel={delA}/>}
-        {view==='detail'&&sel&&<Detail artist={artists.find(a=>a.id===sel.id)} onBack={()=>{setView('artists');setSel(null)}} onUpd={u=>updA(sel.id,u)} onDel={()=>delA(sel.id)}/>}
+      {/* Main */}
+      <main style={{maxWidth:1400,margin:'0 auto',padding:20}}>
+        {sel?<Detail artist={artists.find(a=>a.id===sel.id)} onSave={save} onDel={()=>del(sel.id)} onBack={()=>setSel(null)}/>:<Grid artists={sorted} onSelect={setSel}/>}
       </main>
 
-      {showAdd&&<AddModal onClose={()=>setShowAdd(false)} onAdd={addA} cnt={artists.length}/>}
-      {showEntry&&artists.length>0&&<EntryModal artists={artists} idx={entryIdx} onNext={()=>entryIdx<artists.length-1?setEntryIdx(entryIdx+1):setShowEntry(false)} onPrev={()=>setEntryIdx(Math.max(0,entryIdx-1))} onClose={()=>setShowEntry(false)} onSave={(id,d)=>updA(id,d)}/>}
-      
-      <StatusBar status={status} />
+      {showAdd&&<AddModal onClose={()=>setShowAdd(false)} onAdd={add} count={artists.length}/>}
     </div>
   );
 }
 
-// ============================================================================
-// HOME VIEW
-// ============================================================================
-function Home({ranks,artists,onSel}){
-  const today=new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric',year:'numeric'});
-  return (
-    <div>
-      <div style={{marginBottom:24}}><p style={{fontSize:12,color:'#71717a',marginBottom:2}}>{today}</p><h2 style={{fontSize:24,fontWeight:700}}>Dashboard Overview</h2></div>
-      {ranks.alerts.length>0&&<div style={{marginBottom:20,padding:14,borderRadius:10,background:'rgba(239,68,68,.08)',border:'1px solid rgba(239,68,68,.2)'}}><div style={{display:'flex',alignItems:'center',gap:6,marginBottom:10,color:'#ef4444',fontWeight:600,fontSize:13}}>{I.alert} Alerts</div>{ranks.alerts.slice(0,3).map((a,i)=><div key={i} style={{display:'flex',alignItems:'center',gap:6,marginBottom:4}}><Badge t={a.t}>{a.t}</Badge><span style={{fontSize:12,color:'#a1a1aa'}}>{a.msg}</span></div>)}</div>}
-      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:12,marginBottom:24}}>
-        {[{l:'Artists',v:`${artists.length}/25`},{l:'Songs',v:artists.reduce((s,a)=>s+(a.sg?.length||0),0)},{l:'Avg Score',v:(artists.reduce((s,a)=>s+parseFloat(a.m?.ss||0),0)/(artists.length||1)).toFixed(1)}].map((s,i)=><div key={i} style={{padding:16,borderRadius:10,background:'rgba(255,255,255,.03)',border:'1px solid rgba(255,255,255,.06)'}}><p style={{fontSize:11,color:'#71717a',textTransform:'uppercase',marginBottom:2}}>{s.l}</p><p style={{fontSize:26,fontWeight:700}}>{s.v}</p></div>)}
-      </div>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(320px,1fr))',gap:16}}>
-        <Board title="Top Rising" sub="Composite score" items={ranks.top.map((a,i)=>({r:i+1,p:a.n,s:`Score: ${a.cs}`,v:`+${fmt(a.sv)}/day`,click:()=>onSel(a),hot:a.cs>=7}))}/>
-        <Board title="Top by Streams" sub="Daily velocity" items={ranks.byStr.map((s,i)=>({r:i+1,p:s.t,s:s.an,v:<Vel v={s.sv} s="s"/>,hot:s.sv>=10000}))}/>
-        <Board title="Top by UGC" sub="TikTok growth" items={ranks.byUgc.map((s,i)=>({r:i+1,p:s.t,s:s.an,v:<Vel v={s.uv} s="s"/>,hot:s.uv>=1000}))}/>
-      </div>
-    </div>
-  );
-}
+// Artists Grid
+function Grid({artists,onSelect}){
+  const totals=useMemo(()=>{
+    const ts=artists.reduce((s,a)=>s+totStr(a),0);
+    const tu=artists.reduce((s,a)=>s+totUGC(a),0);
+    const tf=artists.reduce((s,a)=>s+(a.m?.tk||0)+(a.m?.ig||0)+(a.m?.sf||0),0);
+    const ds=artists.reduce((s,a)=>s+dayStr(a),0);
+    return{ts,tu,tf,ds};
+  },[artists]);
 
-function Board({title,sub,items}){
-  return (
-    <div style={S.card}>
-      <div style={{padding:'16px 16px 12px'}}><h3 style={{fontSize:14,fontWeight:600,marginBottom:1}}>{title}</h3><p style={{fontSize:11,color:'#71717a'}}>{sub}</p></div>
-      {items.length===0?<p style={{padding:16,color:'#52525b',fontSize:12,textAlign:'center'}}>No data</p>:items.map((it,i)=>(
-        <div key={i} onClick={it.click} style={{display:'flex',alignItems:'center',gap:10,padding:'10px 16px',borderTop:'1px solid rgba(255,255,255,.04)',cursor:it.click?'pointer':'default'}}>
-          <span style={{width:22,height:22,display:'flex',alignItems:'center',justifyContent:'center',borderRadius:5,background:it.r<=3?'rgba(251,191,36,.15)':'rgba(255,255,255,.05)',color:it.r<=3?'#fbbf24':'#71717a',fontSize:11,fontWeight:700}}>{it.r}</span>
-          <div style={{flex:1,minWidth:0}}><div style={{display:'flex',alignItems:'center',gap:6}}><span style={{fontSize:13,fontWeight:500,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{it.p}</span>{it.hot&&<Badge t="hot">hot</Badge>}</div><span style={{fontSize:11,color:'#71717a'}}>{it.s}</span></div>
-          <div style={{fontSize:12,color:'#a1a1aa'}}>{it.v}</div>
-          {it.click&&I.chev}
+  return(
+    <div className="fi">
+      {/* Stats */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:12,marginBottom:28}}>
+        <Stat label="Total Streams" value={fmt(totals.ts)} delta={totals.ds} color="var(--grn)"/>
+        <Stat label="Total UGC" value={fmt(totals.tu)} icon={I.tk} color="var(--tx-1)"/>
+        <Stat label="Social Followers" value={fmt(totals.tf)} icon={I.ig} color="var(--prp)"/>
+        <Stat label="Artists" value={`${artists.length}/25`} color="var(--acc)"/>
+      </div>
+
+      {/* Header */}
+      <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:12}}>
+        <h2 style={{fontSize:14,fontWeight:600,color:'var(--tx-2)'}}>All Artists</h2>
+        <span style={{fontSize:11,color:'var(--tx-3)'}}>Sorted by streams</span>
+      </div>
+
+      {/* Table */}
+      {artists.length===0?(
+        <div style={{padding:50,textAlign:'center',background:'var(--bg-2)',borderRadius:14,border:'1px solid var(--bd)'}}>
+          <div style={{fontSize:40,marginBottom:12}}>🎤</div>
+          <h3 style={{fontSize:16,marginBottom:6}}>No artists yet</h3>
+          <p style={{color:'var(--tx-3)',fontSize:13}}>Click "Add Artist" to start tracking</p>
         </div>
-      ))}
-    </div>
-  );
-}
-
-// ============================================================================
-// ARTISTS VIEW
-// ============================================================================
-function Artists({artists,onSel,onDel}){
-  const [sort,setSort]=useState('n');
-  const sorted=useMemo(()=>[...artists].sort((a,b)=>sort==='n'?a.n.localeCompare(b.n):sort==='ss'?(parseFloat(b.m?.ss)||0)-(parseFloat(a.m?.ss)||0):(b.m?.tk||0)-(a.m?.tk||0)),[artists,sort]);
-  return (
-    <div>
-      <h2 style={{fontSize:20,fontWeight:700,marginBottom:12}}>Artists ({artists.length}/25)</h2>
-      <div style={{display:'flex',gap:6,marginBottom:16,flexWrap:'wrap'}}>
-        <span style={{fontSize:12,color:'#71717a',alignSelf:'center'}}>Sort:</span>
-        {[['n','Name'],['ss','Score'],['tk','TikTok']].map(([k,l])=><button key={k} onClick={()=>setSort(k)} style={{padding:'5px 10px',borderRadius:5,border:'1px solid',borderColor:sort===k?'rgba(59,130,246,.5)':'rgba(255,255,255,.1)',background:sort===k?'rgba(59,130,246,.1)':'transparent',color:sort===k?'#3b82f6':'#a1a1aa',fontSize:11,cursor:'pointer'}}>{l}</button>)}
-      </div>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))',gap:12}}>
-        {sorted.map(a=><ACard key={a.id} a={a} onClick={()=>onSel(a)}/>)}
-      </div>
-      {artists.length===0&&<div style={{textAlign:'center',padding:60,color:'#52525b'}}><p style={{fontSize:16,marginBottom:8}}>No artists yet</p><p style={{fontSize:13}}>Click "Add Artist" to start tracking</p></div>}
-    </div>
-  );
-}
-
-function ACard({a,onClick}){
-  const v=vel(a.h?.tk);
-  return (
-    <div onClick={onClick} style={{...S.card,cursor:'pointer',transition:'all .2s'}}>
-      <div style={{padding:16}}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'start',marginBottom:12}}>
-          <div><h3 style={{fontSize:16,fontWeight:600,marginBottom:2}}>{a.n}</h3><p style={{fontSize:11,color:'#71717a'}}>Added {new Date(a.da).toLocaleDateString()}</p></div>
-          <div style={{padding:'5px 8px',borderRadius:6,background:'rgba(16,185,129,.1)',border:'1px solid rgba(16,185,129,.2)'}}><span style={{fontSize:10,color:'#71717a',display:'block'}}>Social</span><span style={{fontSize:14,fontWeight:700,color:'#10b981'}}>{a.m?.ss||'—'}</span></div>
-        </div>
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:12}}>
-          <div><span style={{fontSize:10,color:'#71717a',display:'block'}}>TikTok</span><span style={{fontSize:14,fontWeight:600}}>{fmt(a.m?.tk)}</span><Spark data={a.h?.tk?.slice(-14)} h={22}/></div>
-          <div><span style={{fontSize:10,color:'#71717a',display:'block'}}>Spotify</span><span style={{fontSize:14,fontWeight:600}}>{fmt(a.m?.sf)}</span><Spark data={a.h?.sf?.slice(-14)} color="#1DB954" h={22}/></div>
-        </div>
-        <div style={{display:'flex',gap:6}}>{Object.entries(a.l||{}).filter(([_,u])=>u).map(([p,u])=>{const Ic=PI[p];return Ic?<a key={p} href={u} target="_blank" rel="noopener" onClick={e=>e.stopPropagation()} style={{display:'flex',alignItems:'center',justifyContent:'center',width:28,height:28,borderRadius:6,background:'rgba(255,255,255,.05)',color:'#a1a1aa'}}>{Ic}</a>:null})}</div>
-      </div>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'10px 16px',borderTop:'1px solid rgba(255,255,255,.04)',background:'rgba(255,255,255,.01)'}}><span style={{fontSize:11,color:'#71717a'}}>{a.sg?.length||0} songs</span><Vel v={v.abs} s="s"/></div>
-    </div>
-  );
-}
-
-// ============================================================================
-// DETAIL VIEW
-// ============================================================================
-function Detail({artist:a,onBack,onUpd,onDel}){
-  const [ns,setNs]=useState('');
-  const [nsTkUrl,setNsTkUrl]=useState('');
-  const [show,setShow]=useState(false);
-  const [editSong,setEditSong]=useState(null);
-  const [editTkUrl,setEditTkUrl]=useState('');
-  
-  const addSg=()=>{if(!ns.trim()||(a.sg?.length||0)>=50)return;const id='s'+Date.now();onUpd({sg:[...(a.sg||[]),{id,t:ns.trim(),tkUrl:nsTkUrl.trim()}],sm:{...a.sm,[id]:{st:0,ug:0,am:0,h:{st:[],ug:[],am:[]}}}});setNs('');setNsTkUrl('');setShow(false)};
-  const delSg=id=>{if(!confirm('Remove?'))return;const{[id]:_,...rest}=a.sm||{};onUpd({sg:a.sg.filter(s=>s.id!==id),sm:rest})};
-  const saveTkUrl=(id)=>{const newSg=a.sg.map(s=>s.id===id?{...s,tkUrl:editTkUrl.trim()}:s);onUpd({sg:newSg});setEditSong(null);setEditTkUrl('')};
-  
-  if(!a)return null;
-  return (
-    <div>
-      <button onClick={onBack} style={{display:'flex',alignItems:'center',gap:6,padding:'6px 0',marginBottom:12,background:'none',border:'none',color:'#71717a',fontSize:12,cursor:'pointer'}}>{I.back} Back</button>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'start',marginBottom:24,flexWrap:'wrap',gap:12}}>
-        <div><h2 style={{fontSize:26,fontWeight:700,marginBottom:10}}>{a.n}</h2><div style={{display:'flex',gap:6,flexWrap:'wrap'}}>{Object.entries(a.l||{}).filter(([_,u])=>u).map(([p,u])=>{const Ic=PI[p];return <a key={p} href={u} target="_blank" rel="noopener" style={{display:'flex',alignItems:'center',gap:4,padding:'5px 10px',borderRadius:6,background:'rgba(255,255,255,.05)',color:'#a1a1aa',fontSize:11,textDecoration:'none'}}>{Ic&&Ic}{p}{I.ext}</a>})}</div></div>
-        <button onClick={onDel} style={{display:'flex',alignItems:'center',gap:4,padding:'6px 12px',borderRadius:6,border:'1px solid rgba(239,68,68,.3)',background:'rgba(239,68,68,.1)',color:'#ef4444',fontSize:12,cursor:'pointer'}}>{I.trash} Remove</button>
-      </div>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))',gap:12,marginBottom:24}}>
-        {[{l:'Social',v:a.m?.ss,c:'#10b981'},{l:'Spotify',v:fmt(a.m?.sf),h:a.h?.sf,c:'#1DB954'},{l:'Monthly',v:fmt(a.m?.ml),c:'#1DB954'},{l:'TikTok',v:fmt(a.m?.tk),h:a.h?.tk,c:'#fff'},{l:'Instagram',v:fmt(a.m?.ig),h:a.h?.ig,c:'#E1306C'},{l:'TT Posts/Wk',v:a.m?.tp||0,c:'#fff'},{l:'IG Posts/Wk',v:a.m?.ip||0,c:'#E1306C'},{l:'YouTube',v:fmt(a.m?.yt),h:a.h?.yt,c:'#FF0000'}].map((m,i)=><div key={i} style={{padding:14,borderRadius:10,background:'rgba(255,255,255,.02)',border:'1px solid rgba(255,255,255,.06)'}}><p style={{fontSize:10,color:'#71717a',textTransform:'uppercase',marginBottom:2}}>{m.l}</p><p style={{fontSize:20,fontWeight:700,color:m.c,marginBottom:6}}>{m.v===undefined||m.v===null||m.v===''?'—':m.v}</p>{m.h&&<Spark data={m.h.slice(-14)} color={m.c} h={22}/>}</div>)}
-      </div>
-      <div style={S.card}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:16,borderBottom:'1px solid rgba(255,255,255,.06)'}}><div><h3 style={{fontSize:14,fontWeight:600}}>Songs</h3><p style={{fontSize:11,color:'#71717a'}}>{a.sg?.length||0}/50</p></div><button onClick={()=>setShow(true)} style={{display:'flex',alignItems:'center',gap:4,padding:'6px 12px',borderRadius:6,border:'none',background:'rgba(59,130,246,.15)',color:'#3b82f6',fontSize:12,cursor:'pointer'}}>{I.plus} Add</button></div>
-        {show&&<div style={{padding:'12px 16px',borderBottom:'1px solid rgba(255,255,255,.06)',background:'rgba(59,130,246,.05)'}}>
-          <div style={{display:'flex',gap:10,marginBottom:8}}><input value={ns} onChange={e=>setNs(e.target.value)} placeholder="Song title" style={{...S.inp,flex:1}} autoFocus/></div>
-          <div style={{display:'flex',gap:10}}><input value={nsTkUrl} onChange={e=>setNsTkUrl(e.target.value)} placeholder="TikTok Sound URL (optional) - tiktok.com/music/..." style={{...S.inp,flex:1,fontSize:11}}/><button onClick={addSg} style={S.pBtn}>Add</button><button onClick={()=>{setShow(false);setNs('');setNsTkUrl('')}} style={{padding:8,borderRadius:6,border:'1px solid rgba(255,255,255,.1)',background:'transparent',color:'#71717a',cursor:'pointer'}}>{I.x}</button></div>
-        </div>}
-        {(a.sg||[]).length===0?<p style={{padding:32,textAlign:'center',color:'#52525b',fontSize:12}}>No songs yet. Songs will be auto-added when the scraper runs.</p>:(a.sg||[]).map((s,i)=>{const m=a.sm?.[s.id];const sv=vel(m?.h?.st),uv=vel(m?.h?.ug);return (
-          <div key={s.id} style={{padding:'12px 16px',borderTop:i?'1px solid rgba(255,255,255,.04)':'none'}}>
-            <div style={{display:'flex',alignItems:'center',gap:12,flexWrap:'wrap'}}>
-              <div style={{flex:'1 1 150px',minWidth:0}}>
-                <p style={{fontSize:13,fontWeight:500,marginBottom:2}}>{s.t}</p>
-                <p style={{fontSize:11,color:'#71717a'}}>{fmt(m?.st||0)} streams • {fmt(m?.ug||0)} UGC{m?.am?' • '+fmt(m.am)+' Apple':''}</p>
-              </div>
-              <div style={{textAlign:'right'}}><p style={{fontSize:10,color:'#71717a'}}>Str/day</p><Vel v={sv.abs} s="s"/></div>
-              <div style={{textAlign:'right'}}><p style={{fontSize:10,color:'#71717a'}}>UGC/day</p><Vel v={uv.abs} s="s"/>{uv.abs>=1000&&<Badge t="hot">1K+</Badge>}{uv.abs>=100&&uv.abs<1000&&<Badge t="rising">100+</Badge>}</div>
-              <button onClick={()=>delSg(s.id)} style={{padding:5,borderRadius:5,border:'none',background:'transparent',color:'#52525b',cursor:'pointer'}}>{I.trash}</button>
-            </div>
-            {editSong===s.id?(
-              <div style={{display:'flex',gap:8,marginTop:8}}>
-                <input value={editTkUrl} onChange={e=>setEditTkUrl(e.target.value)} placeholder="TikTok Sound URL" style={{...S.inp,flex:1,fontSize:11,padding:6}}/>
-                <button onClick={()=>saveTkUrl(s.id)} style={{padding:'4px 10px',borderRadius:5,border:'none',background:'#10b981',color:'#fff',fontSize:11,cursor:'pointer'}}>Save</button>
-                <button onClick={()=>{setEditSong(null);setEditTkUrl('')}} style={{padding:'4px 8px',borderRadius:5,border:'1px solid rgba(255,255,255,.1)',background:'transparent',color:'#71717a',fontSize:11,cursor:'pointer'}}>Cancel</button>
-              </div>
-            ):(
-              <div style={{display:'flex',alignItems:'center',gap:6,marginTop:6}}>
-                {s.tkUrl?(
-                  <a href={s.tkUrl} target="_blank" rel="noopener" style={{fontSize:10,color:'#10b981',textDecoration:'none',display:'flex',alignItems:'center',gap:4}}>🎵 TikTok Sound{I.ext}</a>
-                ):(
-                  <span style={{fontSize:10,color:'#52525b'}}>No TikTok sound linked</span>
-                )}
-                <button onClick={()=>{setEditSong(s.id);setEditTkUrl(s.tkUrl||'')}} style={{padding:'2px 6px',borderRadius:4,border:'1px solid rgba(255,255,255,.1)',background:'transparent',color:'#71717a',fontSize:10,cursor:'pointer'}}>{s.tkUrl?'Edit':'Add'} Sound URL</button>
-              </div>
-            )}
+      ):(
+        <div style={{background:'var(--bg-2)',borderRadius:14,border:'1px solid var(--bd)',overflow:'hidden'}}>
+          {/* Table Header */}
+          <div style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr 1fr 1fr 1fr 36px',gap:12,padding:'10px 16px',borderBottom:'1px solid var(--bd)',background:'var(--bg-3)',fontSize:10,fontWeight:600,color:'var(--tx-3)',textTransform:'uppercase',letterSpacing:'.5px'}}>
+            <span>Artist</span>
+            <span style={{textAlign:'right'}}>Streams</span>
+            <span style={{textAlign:'right'}}>Daily</span>
+            <span style={{textAlign:'right'}}>TikTok</span>
+            <span style={{textAlign:'right'}}>Instagram</span>
+            <span style={{textAlign:'right'}}>UGC</span>
+            <span></span>
           </div>
-        )})}
+          {/* Rows */}
+          {artists.map((a,i)=><Row key={a.id} a={a} rank={i+1} onClick={()=>onSelect(a)}/>)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Row({a,rank,onClick}){
+  const ts=totStr(a),dv=dayStr(a),tu=totUGC(a);
+  return(
+    <div onClick={onClick} style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr 1fr 1fr 1fr 36px',gap:12,padding:'12px 16px',borderBottom:'1px solid var(--bd-l)',cursor:'pointer',transition:'background .12s'}} onMouseOver={e=>e.currentTarget.style.background='var(--bg-3)'} onMouseOut={e=>e.currentTarget.style.background='transparent'}>
+      <div style={{display:'flex',alignItems:'center',gap:10}}>
+        <span style={{display:'flex',alignItems:'center',justifyContent:'center',width:26,height:26,borderRadius:7,background:rank<=3?'var(--org-l)':'var(--bg-3)',color:rank<=3?'var(--org)':'var(--tx-3)',fontSize:11,fontWeight:700}}>{rank}</span>
+        <div><div style={{fontWeight:600,fontSize:13}}>{a.n}</div><div style={{fontSize:10,color:'var(--tx-3)'}}>{a.sg?.length||0} songs</div></div>
+      </div>
+      <div className="mono" style={{textAlign:'right',fontWeight:600,fontSize:13,alignSelf:'center'}}>{fmt(ts)}</div>
+      <div style={{textAlign:'right',alignSelf:'center'}}><Delta v={dv} sz="sm"/></div>
+      <div className="mono" style={{textAlign:'right',fontSize:12,color:'var(--tx-2)',alignSelf:'center'}}>{fmt(a.m?.tk||0)}</div>
+      <div className="mono" style={{textAlign:'right',fontSize:12,color:'var(--tx-2)',alignSelf:'center'}}>{fmt(a.m?.ig||0)}</div>
+      <div style={{textAlign:'right',alignSelf:'center'}}>
+        {tu>0?<span style={{display:'inline-flex',alignItems:'center',gap:3,padding:'3px 7px',borderRadius:5,background:tu>=1000?'var(--red-l)':'var(--prp-l)',color:tu>=1000?'var(--red)':'var(--prp)',fontSize:11,fontWeight:600}} className="mono">{tu>=1000&&I.fire}{fmt(tu)}</span>:<span style={{color:'var(--tx-3)',fontSize:12}}>—</span>}
+      </div>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'center',color:'var(--tx-3)'}}>{I.chev}</div>
+    </div>
+  );
+}
+
+// Artist Detail
+function Detail({artist:a,onSave,onDel,onBack}){
+  const[editSong,setEditSong]=useState(null);
+  const[newTitle,setNewTitle]=useState('');
+  const[newTkUrl,setNewTkUrl]=useState('');
+  const[showAdd,setShowAdd]=useState(false);
+
+  if(!a)return null;
+
+  const ts=totStr(a),tu=totUGC(a),dsv=dayStr(a),duv=dayUGC(a);
+
+  const addSong=()=>{
+    if(!newTitle.trim())return;
+    const id='s'+Date.now();
+    onSave({...a,sg:[...(a.sg||[]),{id,t:newTitle.trim(),tkUrl:newTkUrl.trim()}],sm:{...a.sm,[id]:{st:0,ug:0,am:0,h:{st:[],ug:[],am:[]}}}});
+    setNewTitle('');setNewTkUrl('');setShowAdd(false);
+  };
+
+  const delSong=id=>{if(!confirm('Remove song?'))return;const{[id]:_,...rest}=a.sm||{};onSave({...a,sg:a.sg.filter(s=>s.id!==id),sm:rest})};
+
+  const saveTkUrl=(id,url)=>{onSave({...a,sg:a.sg.map(s=>s.id===id?{...s,tkUrl:url}:s)});setEditSong(null)};
+
+  return(
+    <div className="fi">
+      {/* Header */}
+      <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:20,flexWrap:'wrap',gap:12}}>
+        <div>
+          <h1 style={{fontSize:28,fontWeight:800,marginBottom:10}}>{a.n}</h1>
+          <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+            {Object.entries(a.l||{}).filter(([_,u])=>u).map(([p,u])=><PBadge key={p} p={p} url={u}/>)}
+          </div>
+        </div>
+        <button onClick={onDel} style={{display:'flex',alignItems:'center',gap:5,padding:'8px 14px',borderRadius:8,border:'1px solid var(--red)',background:'var(--red-l)',color:'var(--red)',fontSize:12,fontWeight:500,cursor:'pointer'}}>{I.trash}Remove</button>
+      </div>
+
+      {/* Stats */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:10,marginBottom:24}}>
+        <Stat label="Total Streams" value={fmt(ts)} delta={dsv} color="var(--grn)"/>
+        <Stat label="Monthly" value={fmt(a.m?.ml||0)} icon={I.sp} color="#1DB954"/>
+        <Stat label="TikTok" value={fmt(a.m?.tk||0)} spark={a.h?.tk?.slice(-14)} color="var(--tx-1)"/>
+        <Stat label="Instagram" value={fmt(a.m?.ig||0)} spark={a.h?.ig?.slice(-14)} color="#E1306C"/>
+        <Stat label="Total UGC" value={fmt(tu)} delta={duv} color="var(--prp)"/>
+        <Stat label="Social Score" value={a.m?.ss||'—'} color="var(--acc)"/>
+      </div>
+
+      {/* Songs */}
+      <div style={{background:'var(--bg-2)',borderRadius:14,border:'1px solid var(--bd)',overflow:'hidden'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'14px 16px',borderBottom:'1px solid var(--bd)'}}>
+          <div><h2 style={{fontSize:14,fontWeight:600}}>Songs</h2><p style={{fontSize:11,color:'var(--tx-3)'}}>{a.sg?.length||0} tracks</p></div>
+          <button onClick={()=>setShowAdd(true)} style={{display:'flex',alignItems:'center',gap:4,padding:'7px 12px',borderRadius:7,border:'none',background:'var(--acc)',color:'#fff',fontSize:12,fontWeight:500,cursor:'pointer'}}>{I.plus}Add</button>
+        </div>
+
+        {/* Add Song Form */}
+        {showAdd&&(
+          <div style={{padding:14,borderBottom:'1px solid var(--bd)',background:'var(--bg-3)'}}>
+            <input type="text" placeholder="Song title" value={newTitle} onChange={e=>setNewTitle(e.target.value)} autoFocus style={{width:'100%',padding:'10px 12px',borderRadius:7,border:'1px solid var(--bd)',background:'var(--bg-2)',color:'var(--tx-1)',fontSize:13,marginBottom:8}}/>
+            <div style={{display:'flex',gap:8}}>
+              <input type="text" placeholder="TikTok Sound URL (optional)" value={newTkUrl} onChange={e=>setNewTkUrl(e.target.value)} style={{flex:1,padding:'9px 12px',borderRadius:7,border:'1px solid var(--bd)',background:'var(--bg-2)',color:'var(--tx-1)',fontSize:12}}/>
+              <button onClick={addSong} style={{padding:'9px 16px',borderRadius:7,border:'none',background:'var(--grn)',color:'#fff',fontWeight:600,fontSize:12,cursor:'pointer'}}>Add</button>
+              <button onClick={()=>{setShowAdd(false);setNewTitle('');setNewTkUrl('')}} style={{padding:'9px 12px',borderRadius:7,border:'1px solid var(--bd)',background:'transparent',color:'var(--tx-3)',cursor:'pointer'}}>Cancel</button>
+            </div>
+          </div>
+        )}
+
+        {/* Songs List */}
+        {(!a.sg||a.sg.length===0)?(
+          <div style={{padding:36,textAlign:'center',color:'var(--tx-3)',fontSize:13}}>No songs yet. Songs auto-add when scraper runs.</div>
+        ):(
+          <div>
+            <div style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr 1fr 1fr 50px',gap:10,padding:'8px 16px',background:'var(--bg-3)',fontSize:10,fontWeight:600,color:'var(--tx-3)',textTransform:'uppercase',letterSpacing:'.5px'}}>
+              <span>Title</span>
+              <span style={{textAlign:'right'}}>Streams</span>
+              <span style={{textAlign:'right'}}>Daily</span>
+              <span style={{textAlign:'right'}}>UGC</span>
+              <span>TikTok</span>
+              <span></span>
+            </div>
+            {a.sg.map(s=>{
+              const m=a.sm?.[s.id]||{};
+              const sv=vel(m.h?.st,1);
+              return(
+                <div key={s.id} style={{padding:'10px 16px',borderTop:'1px solid var(--bd-l)'}}>
+                  <div style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr 1fr 1fr 50px',gap:10,alignItems:'center'}}>
+                    <div style={{fontWeight:500,fontSize:13}}>{s.t}</div>
+                    <div className="mono" style={{textAlign:'right',fontWeight:600,fontSize:13}}>{fmt(m.st||0)}</div>
+                    <div style={{textAlign:'right'}}><Delta v={sv} sz="sm"/></div>
+                    <div style={{textAlign:'right'}}>
+                      {m.ug>0?<span className="mono" style={{display:'inline-flex',alignItems:'center',gap:3,padding:'2px 6px',borderRadius:5,background:m.ug>=1000?'var(--red-l)':'var(--prp-l)',color:m.ug>=1000?'var(--red)':'var(--prp)',fontSize:11,fontWeight:600}}>{m.ug>=1000&&I.fire}{fmt(m.ug)}</span>:<span style={{color:'var(--tx-3)'}}>—</span>}
+                    </div>
+                    <div>
+                      {editSong===s.id?(
+                        <div style={{display:'flex',gap:4}}>
+                          <input type="text" defaultValue={s.tkUrl||''} placeholder="URL" style={{flex:1,padding:'5px 7px',borderRadius:5,border:'1px solid var(--bd)',background:'var(--bg-1)',color:'var(--tx-1)',fontSize:10,minWidth:0}} onKeyDown={e=>{if(e.key==='Enter')saveTkUrl(s.id,e.target.value);if(e.key==='Escape')setEditSong(null)}} autoFocus/>
+                          <button onClick={e=>saveTkUrl(s.id,e.target.previousSibling.value)} style={{padding:'4px 7px',borderRadius:4,border:'none',background:'var(--grn)',color:'#fff',fontSize:10,cursor:'pointer'}}>✓</button>
+                        </div>
+                      ):(
+                        <button onClick={()=>setEditSong(s.id)} style={{padding:'3px 7px',borderRadius:5,border:'1px solid var(--bd)',background:s.tkUrl?'var(--grn-l)':'transparent',color:s.tkUrl?'var(--grn)':'var(--tx-3)',fontSize:10,cursor:'pointer'}}>{s.tkUrl?'🎵 Linked':'+ Link'}</button>
+                      )}
+                    </div>
+                    <div style={{textAlign:'center'}}><button onClick={()=>delSong(s.id)} style={{padding:4,borderRadius:5,border:'none',background:'transparent',color:'var(--tx-3)',cursor:'pointer'}}>{I.trash}</button></div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-// ============================================================================
-// ADD MODAL
-// ============================================================================
-function AddModal({onClose,onAdd,cnt}){
-  const [f,setF]=useState({n:'',sp:'',tk:'',ig:'',yt:'',am:''});
-  const sub=()=>{if(!f.n.trim()){alert('Name required');return}onAdd({n:f.n.trim(),da:new Date().toISOString().split('T')[0],l:{sp:f.sp,tk:f.tk,ig:f.ig,yt:f.yt,am:f.am},m:{sf:0,ml:0,tk:0,ig:0,yt:0,tp:0,ip:0,ss:0}})};
-  return (
-    <div style={S.modal}><div style={S.modalC}>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'16px 20px',borderBottom:'1px solid rgba(255,255,255,.06)'}}><h2 style={{fontSize:16,fontWeight:600}}>Add Artist</h2><button onClick={onClose} style={{padding:6,borderRadius:6,border:'none',background:'rgba(255,255,255,.05)',color:'#71717a',cursor:'pointer'}}>{I.x}</button></div>
-      <div style={{padding:20,display:'flex',flexDirection:'column',gap:12,maxHeight:'60vh',overflow:'auto'}}>
-        <p style={{fontSize:12,color:'#71717a'}}>{cnt}/25 artists</p>
-        <div><label style={{display:'block',fontSize:11,color:'#a1a1aa',marginBottom:4}}>Name *</label><input value={f.n} onChange={e=>setF({...f,n:e.target.value})} style={S.inp}/></div>
-        {[['sp','Spotify',PI.sp,'open.spotify.com/artist/...'],['tk','TikTok',PI.tk,'tiktok.com/@...'],['ig','Instagram',PI.ig,'instagram.com/...'],['yt','YouTube',PI.yt,'youtube.com/@...'],['am','Apple Music',<span style={{fontSize:14}}>🍎</span>,'music.apple.com/artist/...']].map(([k,l,ic,ph])=><div key={k}><label style={{display:'flex',alignItems:'center',gap:4,fontSize:11,color:'#a1a1aa',marginBottom:4}}>{ic}{l}</label><input value={f[k]} onChange={e=>setF({...f,[k]:e.target.value})} placeholder={`https://${ph}`} style={{...S.inp,padding:8,fontSize:12}}/></div>)}
-      </div>
-      <div style={{display:'flex',gap:10,padding:'16px 20px',borderTop:'1px solid rgba(255,255,255,.06)'}}><button onClick={onClose} style={{flex:1,padding:10,borderRadius:8,border:'1px solid rgba(255,255,255,.1)',background:'transparent',color:'#a1a1aa',fontSize:13,cursor:'pointer'}}>Cancel</button><button onClick={sub} style={{flex:1,padding:10,borderRadius:8,border:'none',background:'linear-gradient(135deg,#3b82f6,#2563eb)',color:'#fff',fontSize:13,fontWeight:600,cursor:'pointer'}}>Add</button></div>
-    </div></div>
-  );
-}
+// Add Artist Modal
+function AddModal({onClose,onAdd,count}){
+  const[f,setF]=useState({n:'',sp:'',tk:'',ig:'',yt:'',am:''});
 
-// ============================================================================
-// ENTRY MODAL
-// ============================================================================
-function EntryModal({artists,idx,onNext,onPrev,onClose,onSave}){
-  const a=artists[idx];
-  const [m,setM]=useState({});
-  const [sg,setSg]=useState({});
-  useEffect(()=>{if(a){setM({sf:a.m?.sf||'',ml:a.m?.ml||'',tk:a.m?.tk||'',ig:a.m?.ig||'',tp:a.m?.tp||'',ip:a.m?.ip||''});const s={};(a.sg||[]).forEach(x=>{const mt=a.sm?.[x.id];s[x.id]={st:mt?.st||'',ug:mt?.ug||''}});setSg(s)}},[a]);
-  const save=()=>{const td=new Date().toISOString().split('T')[0];const nm={...a.m};const nh={...a.h};const nsm={...a.sm};Object.entries(m).forEach(([k,v])=>{const n=parseInt(v)||0;nm[k]=n;if(['sf','tk','ig'].includes(k))nh[k]=[...(nh[k]||[]),{d:td,v:n}].slice(-90)});nm.ss=socScore(nm.tp,nm.ip);Object.entries(sg).forEach(([id,d])=>{const st=parseInt(d.st)||0,ug=parseInt(d.ug)||0;nsm[id]={...nsm[id],st,ug,h:{st:[...(nsm[id]?.h?.st||[]),{d:td,v:st}].slice(-90),ug:[...(nsm[id]?.h?.ug||[]),{d:td,v:ug}].slice(-90)}}});onSave(a.id,{m:nm,h:nh,sm:nsm});onNext()};
-  if(!a)return null;
-  return (
-    <div style={S.modal}><div style={{...S.modalC,maxWidth:520}}>
-      <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'16px 20px',borderBottom:'1px solid rgba(255,255,255,.06)'}}><div><h2 style={{fontSize:16,fontWeight:600}}>{a.n}</h2><p style={{fontSize:11,color:'#71717a'}}>{idx+1}/{artists.length}</p></div><button onClick={onClose} style={{padding:6,borderRadius:6,border:'none',background:'rgba(255,255,255,.05)',color:'#71717a',cursor:'pointer'}}>{I.x}</button></div>
-      <div style={{padding:20,maxHeight:'55vh',overflow:'auto'}}>
-        <h3 style={{fontSize:12,fontWeight:600,marginBottom:12,color:'#a1a1aa'}}>Followers & Activity</h3>
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:20}}>
-          {[['sf','Spotify Followers'],['ml','Monthly Listeners'],['tk','TikTok Followers'],['ig','Instagram Followers'],['tp','TikTok Posts/Wk'],['ip','IG Posts/Wk']].map(([k,l])=><div key={k}><label style={{display:'block',fontSize:10,color:'#71717a',marginBottom:3}}>{l}</label><input type="number" value={m[k]} onChange={e=>setM({...m,[k]:e.target.value})} style={{...S.inp,padding:8}}/></div>)}
+  const submit=()=>{
+    if(!f.n.trim()){alert('Name required');return}
+    onAdd({n:f.n.trim(),da:new Date().toISOString().split('T')[0],l:{sp:f.sp,tk:f.tk,ig:f.ig,yt:f.yt,am:f.am},m:{sf:0,ml:0,tk:0,ig:0,yt:0,tp:0,ip:0,ss:0}});
+  };
+
+  return(
+    <div style={{position:'fixed',inset:0,background:'rgba(0,0,0,.55)',backdropFilter:'blur(4px)',display:'flex',alignItems:'center',justifyContent:'center',padding:16,zIndex:1000}}>
+      <div style={{width:'100%',maxWidth:440,background:'var(--bg-2)',borderRadius:14,border:'1px solid var(--bd)',overflow:'hidden'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'14px 18px',borderBottom:'1px solid var(--bd)'}}>
+          <h2 style={{fontSize:16,fontWeight:600}}>Add Artist</h2>
+          <button onClick={onClose} style={{padding:6,borderRadius:6,border:'none',background:'var(--bg-3)',color:'var(--tx-3)',cursor:'pointer'}}>{I.x}</button>
         </div>
-        {(a.sg||[]).length>0&&<><h3 style={{fontSize:12,fontWeight:600,marginBottom:12,color:'#a1a1aa'}}>Songs</h3>{(a.sg||[]).map(s=><div key={s.id} style={{marginBottom:12,padding:12,borderRadius:10,background:'rgba(255,255,255,.02)',border:'1px solid rgba(255,255,255,.06)'}}><p style={{fontSize:13,fontWeight:500,marginBottom:10}}>{s.t}</p><div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:10}}><div><label style={{display:'block',fontSize:10,color:'#71717a',marginBottom:3}}>Streams</label><input type="number" value={sg[s.id]?.st||''} onChange={e=>setSg({...sg,[s.id]:{...sg[s.id],st:e.target.value}})} style={{...S.inp,padding:8}}/></div><div><label style={{display:'block',fontSize:10,color:'#71717a',marginBottom:3}}>UGC Count</label><input type="number" value={sg[s.id]?.ug||''} onChange={e=>setSg({...sg,[s.id]:{...sg[s.id],ug:e.target.value}})} style={{...S.inp,padding:8}}/></div></div></div>)}</>}
+        <div style={{padding:18,maxHeight:'60vh',overflow:'auto'}}>
+          <p style={{fontSize:11,color:'var(--tx-3)',marginBottom:14}}>{count}/25 artists</p>
+          <div style={{marginBottom:14}}>
+            <label style={{display:'block',fontSize:11,fontWeight:500,color:'var(--tx-2)',marginBottom:5}}>Artist Name *</label>
+            <input type="text" value={f.n} onChange={e=>setF({...f,n:e.target.value})} placeholder="Enter name" style={{width:'100%',padding:'11px 13px',borderRadius:8,border:'1px solid var(--bd)',background:'var(--bg-3)',color:'var(--tx-1)',fontSize:13}}/>
+          </div>
+          {[['sp','Spotify',I.sp,'open.spotify.com/artist/...'],['tk','TikTok',I.tk,'tiktok.com/@...'],['ig','Instagram',I.ig,'instagram.com/...'],['yt','YouTube',I.yt,'youtube.com/@...'],['am','Apple Music',I.am,'music.apple.com/artist/...']].map(([k,l,ic,ph])=>(
+            <div key={k} style={{marginBottom:10}}>
+              <label style={{display:'flex',alignItems:'center',gap:5,fontSize:11,fontWeight:500,color:'var(--tx-2)',marginBottom:5}}>{ic}{l}</label>
+              <input type="text" value={f[k]} onChange={e=>setF({...f,[k]:e.target.value})} placeholder={`https://${ph}`} style={{width:'100%',padding:'9px 11px',borderRadius:7,border:'1px solid var(--bd)',background:'var(--bg-3)',color:'var(--tx-1)',fontSize:12}}/>
+            </div>
+          ))}
+        </div>
+        <div style={{display:'flex',gap:10,padding:'14px 18px',borderTop:'1px solid var(--bd)'}}>
+          <button onClick={onClose} style={{flex:1,padding:'11px 14px',borderRadius:8,border:'1px solid var(--bd)',background:'transparent',color:'var(--tx-2)',fontSize:13,fontWeight:500,cursor:'pointer'}}>Cancel</button>
+          <button onClick={submit} style={{flex:1,padding:'11px 14px',borderRadius:8,border:'none',background:'var(--acc)',color:'#fff',fontSize:13,fontWeight:600,cursor:'pointer'}}>Add Artist</button>
+        </div>
       </div>
-      <div style={{display:'flex',gap:10,padding:'16px 20px',borderTop:'1px solid rgba(255,255,255,.06)'}}><button onClick={onPrev} disabled={idx===0} style={{padding:'10px 16px',borderRadius:8,border:'1px solid rgba(255,255,255,.1)',background:'transparent',color:idx===0?'#52525b':'#a1a1aa',fontSize:13,cursor:idx===0?'not-allowed':'pointer'}}>Prev</button><button onClick={save} style={{flex:1,padding:10,borderRadius:8,border:'none',background:'linear-gradient(135deg,#10b981,#059669)',color:'#fff',fontSize:13,fontWeight:600,cursor:'pointer'}}>Save & {idx<artists.length-1?'Next':'Finish'}</button></div>
-    </div></div>
+    </div>
   );
 }
 
-// ============================================================================
-// RENDER
-// ============================================================================
+// Render
 ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
 </script>
 </body>
