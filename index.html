@@ -528,7 +528,7 @@ function Detail({artist:a,onSave,onDel,onBack}){
                         <button onClick={()=>setEditSong(s.id)} style={{padding:'3px 7px',borderRadius:5,border:'1px solid var(--bd)',background:s.tkUrl?'var(--grn-l)':'transparent',color:s.tkUrl?'var(--grn)':'var(--tx-3)',fontSize:10,cursor:'pointer'}}>{s.tkUrl?'🎵 Linked':'+ Link'}</button>
                       )}
                     </div>
-                    <div style={{textAlign:'center',display:'flex',gap:4'}}>
+                    <div style={{textAlign:'center',display:'flex',gap:4}}>
                       <button onClick={()=>toggleYTUpload(s.id)} title={s.isYTUpload?"Mark as stream":"Mark as YT Upload"} style={{padding:4,borderRadius:5,border:'none',background:'transparent',color:s.isYTUpload?'var(--org)':'var(--tx-3)',cursor:'pointer',fontSize:10}}>{I.yt}</button>
                       <button onClick={()=>delSong(s.id)} style={{padding:4,borderRadius:5,border:'none',background:'transparent',color:'var(--tx-3)',cursor:'pointer'}}>{I.trash}</button>
                     </div>
