@@ -24,6 +24,7 @@
     @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}.fi{animation:fadeIn .4s ease-out forwards}
     .mono{font-family:'JetBrains Mono',monospace}
     .clickable{cursor:pointer;transition:transform .1s,box-shadow .2s}.clickable:hover{transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.08)}
+    @media(max-width:600px){.hide-mobile{display:none!important}.mobile-full{grid-template-columns:1fr!important}}
   </style>
 </head>
 <body>
@@ -47,16 +48,40 @@ const{useState,useEffect,useMemo}=React;
 const fmt=n=>{if(!n||n===0)return'0';if(n>=1e9)return(n/1e9).toFixed(1)+'B';if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).toFixed(1)+'K';return n.toLocaleString()};
 const fmtD=n=>{if(!n||n===0)return'0';const a=Math.abs(n),p=n>=0?'+':'-';if(a>=1e6)return p+(a/1e6).toFixed(1)+'M';if(a>=1e3)return p+(a/1e3).toFixed(1)+'K';return p+a.toLocaleString()};
 const vel=(h,d=1)=>{if(!h||h.length<2)return 0;return(h[h.length-1]?.v||0)-(h[Math.max(0,h.length-1-d)]?.v||0)};
+const timeAgo=d=>{if(!d)return'Never';const now=new Date(),then=new Date(d),diff=Math.floor((now-then)/1000);if(diff<60)return'Just now';if(diff<3600)return Math.floor(diff/60)+'m ago';if(diff<86400)return Math.floor(diff/3600)+'h ago';return Math.floor(diff/86400)+'d ago';};
 
-// Stream calculations - include all sources
+// Stream calculations - Spotify + YouTube views per song
 const getSpotifyStreams=a=>a.sm?Object.values(a.sm).reduce((s,x)=>s+(x.st||0),0):0;
-const getAppleStreams=a=>a.sm?Object.values(a.sm).reduce((s,x)=>s+(x.am||0),0):0;
 const getYTViews=a=>a.sm?Object.values(a.sm).reduce((s,x)=>s+(x.yt||0),0):0;
-const totStr=a=>getSpotifyStreams(a)+getAppleStreams(a)+getYTViews(a);
+const totStr=a=>getSpotifyStreams(a)+getYTViews(a);
 const totUGC=a=>a.sm?Object.values(a.sm).reduce((s,x)=>s+(x.ug||0),0):0;
-const dayStr=a=>a.sm?Object.values(a.sm).reduce((s,x)=>s+vel(x.h?.st,1)+vel(x.h?.am,1)+vel(x.h?.yt,1),0):0;
-const weekStr=a=>a.sm?Object.values(a.sm).reduce((s,x)=>s+vel(x.h?.st,7)+vel(x.h?.am,7)+vel(x.h?.yt,7),0):0;
+const dayStr=a=>a.sm?Object.values(a.sm).reduce((s,x)=>s+vel(x.h?.st,1)+vel(x.h?.yt,1),0):0;
+const weekStr=a=>a.sm?Object.values(a.sm).reduce((s,x)=>s+vel(x.h?.st,7)+vel(x.h?.yt,7),0):0;
 const dayUGC=a=>a.sm?Object.values(a.sm).reduce((s,x)=>s+vel(x.h?.ug,1),0):0;
+
+// Get last updated timestamp from artist data
+const getLastUpdated=a=>{
+  if(!a.sm)return null;
+  let latest=null;
+  Object.values(a.sm).forEach(m=>{
+    ['st','yt','ug'].forEach(k=>{
+      const h=m.h?.[k];
+      if(h&&h.length>0){
+        const last=h[h.length-1]?.d;
+        if(last&&(!latest||last>latest))latest=last;
+      }
+    });
+  });
+  // Also check social history
+  ['tk','ig'].forEach(k=>{
+    const h=a.h?.[k];
+    if(h&&h.length>0){
+      const last=h[h.length-1]?.d;
+      if(last&&(!latest||last>latest))latest=last;
+    }
+  });
+  return latest;
+};
 
 // Icons
 const I={
@@ -73,6 +98,7 @@ const I={
   edit:<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>,
   x:<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
   fire:<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 23c-4.97 0-9-3.58-9-8 0-3.31 2.69-6.14 5-8 0 2.76 2.24 5 5 5s4-1.34 4-3c1.5 1.5 3 4 3 6 0 4.42-4.03 8-8 8z"/></svg>,
+  clock:<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>,
   sp:<svg width="15" height="15" viewBox="0 0 24 24" fill="#1DB954"><path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02z"/></svg>,
   tk:<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64V9.4A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4z"/></svg>,
   ig:<svg width="15" height="15" viewBox="0 0 24 24" fill="#E1306C"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0z"/></svg>,
@@ -121,38 +147,39 @@ const Stat=({label,value,delta,icon,color,spark,onClick})=>(
   </div>
 );
 
-// Stats Detail Modal with DSP breakdown
+// Stats Detail Modal - Spotify + YouTube breakdown
 function StatsModal({title,artist,type,onClose}){
   const data=useMemo(()=>{
     const a=artist;
     if(type==='streams'){
       const spotify=getSpotifyStreams(a);
-      const apple=getAppleStreams(a);
       const youtube=getYTViews(a);
-      const total=spotify+apple+youtube;
+      const total=spotify+youtube;
       const daily=dayStr(a);
       const weekly=weekStr(a);
-      return{total,daily,weekly,spotify,apple,youtube,desc:'Combined streams from all digital streaming platforms'};
+      return{total,daily,weekly,spotify,youtube,desc:'Combined streams from Spotify and YouTube'};
     }
     if(type==='tiktok'){
       const total=a.m?.tk||0;
       const daily=vel(a.h?.tk,1);
       const weekly=vel(a.h?.tk,7);
-      return{total,daily,weekly,desc:'Total TikTok followers'};
+      const postsWk=a.m?.tp||0;
+      return{total,daily,weekly,postsWk,desc:'Total TikTok followers'};
     }
     if(type==='instagram'){
       const total=a.m?.ig||0;
       const daily=vel(a.h?.ig,1);
       const weekly=vel(a.h?.ig,7);
-      return{total,daily,weekly,desc:'Total Instagram followers'};
+      const postsWk=a.m?.ip||0;
+      return{total,daily,weekly,postsWk,desc:'Total Instagram followers'};
     }
     if(type==='ugc'){
       const total=totUGC(a);
       const daily=dayUGC(a);
-      return{total,daily,weekly:0,desc:'Total TikTok videos using artist sounds (UGC = User Generated Content). Note: Manual entry may be needed as TikTok app shows different counts than web.'};
+      return{total,daily,weekly:0,desc:'Total TikTok videos using artist sounds. Tap UGC count on songs to update manually.'};
     }
     if(type==='social'){
-      return{total:a.m?.ss||0,daily:0,weekly:0,desc:'Social Score based on TikTok and Instagram posting consistency (0-10 scale)'};
+      return{total:a.m?.ss||0,daily:0,weekly:0,tkPosts:a.m?.tp||0,igPosts:a.m?.ip||0,desc:'Social Score based on TikTok and Instagram posting consistency (0-10 scale)'};
     }
     return{total:0,daily:0,weekly:0,desc:''};
   },[artist,type]);
@@ -183,7 +210,7 @@ function StatsModal({title,artist,type,onClose}){
             </div>
           </div>
 
-          {/* DSP Breakdown for streams */}
+          {/* DSP Breakdown for streams - Spotify + YouTube */}
           {type==='streams'&&(
             <div>
               <h3 style={{fontSize:12,fontWeight:600,color:'var(--tx-2)',marginBottom:10}}>Breakdown by Platform</h3>
@@ -193,12 +220,33 @@ function StatsModal({title,artist,type,onClose}){
                   <span className="mono" style={{fontWeight:600}}>{fmt(data.spotify)}</span>
                 </div>
                 <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 12px',borderRadius:8,background:'var(--bg-3)'}}>
-                  <div style={{display:'flex',alignItems:'center',gap:8}}>{I.am}<span style={{fontSize:13}}>Apple Music</span></div>
-                  <span className="mono" style={{fontWeight:600}}>{fmt(data.apple)}</span>
-                </div>
-                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 12px',borderRadius:8,background:'var(--bg-3)'}}>
                   <div style={{display:'flex',alignItems:'center',gap:8}}>{I.yt}<span style={{fontSize:13}}>YouTube</span></div>
                   <span className="mono" style={{fontWeight:600}}>{fmt(data.youtube)}</span>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Posts per week for social platforms */}
+          {(type==='tiktok'||type==='instagram')&&data.postsWk!==undefined&&(
+            <div style={{padding:12,borderRadius:10,background:'var(--acc-l)',marginTop:8}}>
+              <div style={{fontSize:10,color:'var(--acc)',textTransform:'uppercase',marginBottom:4}}>Posts/Week</div>
+              <div className="mono" style={{fontSize:20,fontWeight:700,color:'var(--acc)'}}>{data.postsWk}</div>
+            </div>
+          )}
+
+          {/* Social score breakdown */}
+          {type==='social'&&(
+            <div>
+              <h3 style={{fontSize:12,fontWeight:600,color:'var(--tx-2)',marginBottom:10}}>Posting Activity</h3>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 12px',borderRadius:8,background:'var(--bg-3)'}}>
+                  <div style={{display:'flex',alignItems:'center',gap:6}}>{I.tk}<span style={{fontSize:12}}>TikTok/wk</span></div>
+                  <span className="mono" style={{fontWeight:600}}>{data.tkPosts||0}</span>
+                </div>
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 12px',borderRadius:8,background:'var(--bg-3)'}}>
+                  <div style={{display:'flex',alignItems:'center',gap:6}}>{I.ig}<span style={{fontSize:12}}>IG/wk</span></div>
+                  <span className="mono" style={{fontWeight:600}}>{data.igPosts||0}</span>
                 </div>
               </div>
             </div>
@@ -241,6 +289,16 @@ function App(){
     });
   },[filtered,sortBy]);
 
+  // Get global last updated
+  const lastUpdated=useMemo(()=>{
+    let latest=null;
+    artists.forEach(a=>{
+      const lu=getLastUpdated(a);
+      if(lu&&(!latest||lu>latest))latest=lu;
+    });
+    return latest;
+  },[artists]);
+
   if(loading)return<div className="ld"><div className="sp"></div><span style={{color:'var(--tx-3)',fontSize:14}}>Loading...</span></div>;
 
   return(
@@ -249,20 +307,21 @@ function App(){
       <header style={{position:'sticky',top:0,zIndex:100,background:'var(--bg-2)',borderBottom:'1px solid var(--bd)',padding:'10px 20px'}}>
         <div style={{maxWidth:1400,margin:'0 auto',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,flexWrap:'wrap'}}>
           <div style={{display:'flex',alignItems:'center',gap:16}}>
-            <h1 style={{fontSize:17,fontWeight:700,display:'flex',alignItems:'center',gap:8}}><span style={{fontSize:22}}>🎵</span>A&R Dashboard</h1>
-            {sel&&<button onClick={()=>setSel(null)} style={{display:'flex',alignItems:'center',gap:5,padding:'7px 12px',borderRadius:8,border:'none',background:'var(--bg-3)',color:'var(--tx-2)',fontSize:12,fontWeight:500,cursor:'pointer'}}>{I.back}All Artists</button>}
+            <h1 style={{fontSize:17,fontWeight:700,display:'flex',alignItems:'center',gap:8}}><span style={{fontSize:22}}>🎵</span><span className="hide-mobile">A&R Dashboard</span></h1>
+            {sel&&<button onClick={()=>setSel(null)} style={{display:'flex',alignItems:'center',gap:5,padding:'7px 12px',borderRadius:8,border:'none',background:'var(--bg-3)',color:'var(--tx-2)',fontSize:12,fontWeight:500,cursor:'pointer'}}>{I.back}<span className="hide-mobile">All Artists</span></button>}
           </div>
           <div style={{display:'flex',alignItems:'center',gap:10}}>
-            {!sel&&<div style={{position:'relative'}}><span style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',color:'var(--tx-3)'}}>{I.search}</span><input type="text" placeholder="Search..." value={search} onChange={e=>setSearch(e.target.value)} style={{width:160,padding:'9px 10px 9px 36px',borderRadius:8,border:'1px solid var(--bd)',background:'var(--bg-3)',color:'var(--tx-1)',fontSize:13}}/></div>}
-            <button onClick={()=>setShowAdd(true)} style={{display:'flex',alignItems:'center',gap:5,padding:'9px 14px',borderRadius:8,border:'none',background:'var(--acc)',color:'#fff',fontSize:12,fontWeight:600,cursor:'pointer'}}>{I.plus}Add Artist</button>
-            <button onClick={toggle} style={{display:'flex',alignItems:'center',justifyContent:'center',width:38,height:38,borderRadius:8,border:'1px solid var(--bd)',background:'var(--bg-3)',color:'var(--tx-2)',cursor:'pointer'}} title={theme==='dark'?'Light mode':'Dark mode'}>{theme==='dark'?I.sun:I.moon}</button>
+            {lastUpdated&&<span style={{fontSize:10,color:'var(--tx-3)',display:'flex',alignItems:'center',gap:4}} className="hide-mobile">{I.clock}Updated {timeAgo(lastUpdated)}</span>}
+            {!sel&&<div style={{position:'relative'}} className="hide-mobile"><span style={{position:'absolute',left:10,top:'50%',transform:'translateY(-50%)',color:'var(--tx-3)'}}>{I.search}</span><input type="text" placeholder="Search..." value={search} onChange={e=>setSearch(e.target.value)} style={{width:140,padding:'9px 10px 9px 36px',borderRadius:8,border:'1px solid var(--bd)',background:'var(--bg-3)',color:'var(--tx-1)',fontSize:13}}/></div>}
+            <button onClick={()=>setShowAdd(true)} style={{display:'flex',alignItems:'center',gap:5,padding:'9px 14px',borderRadius:8,border:'none',background:'var(--acc)',color:'#fff',fontSize:12,fontWeight:600,cursor:'pointer'}}>{I.plus}<span className="hide-mobile">Add</span></button>
+            <button onClick={toggle} style={{display:'flex',alignItems:'center',justifyContent:'center',width:38,height:38,borderRadius:8,border:'1px solid var(--bd)',background:'var(--bg-3)',color:'var(--tx-2)',cursor:'pointer'}}>{theme==='dark'?I.sun:I.moon}</button>
           </div>
         </div>
       </header>
 
       {/* Main */}
       <main style={{maxWidth:1400,margin:'0 auto',padding:20}}>
-        {sel?<Detail artist={artists.find(a=>a.id===sel.id)} onSave={save} onDel={()=>del(sel.id)} onBack={()=>setSel(null)} onStatClick={setStatsModal}/>:<Grid artists={sorted} onSelect={setSel} sortBy={sortBy} setSortBy={setSortBy}/>}
+        {sel?<Detail artist={artists.find(a=>a.id===sel.id)} onSave={save} onDel={()=>del(sel.id)} onBack={()=>setSel(null)} onStatClick={setStatsModal}/>:<Grid artists={sorted} onSelect={setSel} sortBy={sortBy} setSortBy={setSortBy} lastUpdated={lastUpdated}/>}
       </main>
 
       {showAdd&&<AddModal onClose={()=>setShowAdd(false)} onAdd={add} count={artists.length}/>}
@@ -271,15 +330,18 @@ function App(){
   );
 }
 
-// Artists Grid - Simple list with sorting
-function Grid({artists,onSelect,sortBy,setSortBy}){
+// Artists Grid with last updated timestamp
+function Grid({artists,onSelect,sortBy,setSortBy,lastUpdated}){
   return(
     <div className="fi">
-      {/* Header with sort */}
+      {/* Header with sort and timestamp */}
       <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:16,flexWrap:'wrap',gap:12}}>
-        <h2 style={{fontSize:16,fontWeight:600}}>Artists ({artists.length}/25)</h2>
+        <div>
+          <h2 style={{fontSize:16,fontWeight:600}}>Artists ({artists.length}/25)</h2>
+          {lastUpdated&&<p style={{fontSize:11,color:'var(--tx-3)',marginTop:2,display:'flex',alignItems:'center',gap:4}}>{I.clock}Last scraped: {new Date(lastUpdated).toLocaleDateString()} {new Date(lastUpdated).toLocaleTimeString()}</p>}
+        </div>
         <div style={{display:'flex',alignItems:'center',gap:8}}>
-          <span style={{fontSize:12,color:'var(--tx-3)'}}>Sort by:</span>
+          <span style={{fontSize:12,color:'var(--tx-3)'}}>Sort:</span>
           <select value={sortBy} onChange={e=>setSortBy(e.target.value)}>
             <option value="streams">Total Streams</option>
             <option value="velocity">Daily Velocity</option>
@@ -296,19 +358,19 @@ function Grid({artists,onSelect,sortBy,setSortBy}){
         <div style={{padding:50,textAlign:'center',background:'var(--bg-2)',borderRadius:14,border:'1px solid var(--bd)'}}>
           <div style={{fontSize:40,marginBottom:12}}>🎤</div>
           <h3 style={{fontSize:16,marginBottom:6}}>No artists yet</h3>
-          <p style={{color:'var(--tx-3)',fontSize:13}}>Click "Add Artist" to start tracking</p>
+          <p style={{color:'var(--tx-3)',fontSize:13}}>Click "Add" to start tracking</p>
         </div>
       ):(
         <div style={{background:'var(--bg-2)',borderRadius:14,border:'1px solid var(--bd)',overflow:'hidden'}}>
           {/* Table Header */}
-          <div style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr 1fr 1fr 1fr 36px',gap:12,padding:'10px 16px',borderBottom:'1px solid var(--bd)',background:'var(--bg-3)',fontSize:10,fontWeight:600,color:'var(--tx-3)',textTransform:'uppercase',letterSpacing:'.5px'}}>
+          <div style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr 1fr 1fr 1fr 36px',gap:12,padding:'10px 16px',borderBottom:'1px solid var(--bd)',background:'var(--bg-3)',fontSize:10,fontWeight:600,color:'var(--tx-3)',textTransform:'uppercase',letterSpacing:'.5px'}} className="mobile-full">
             <span>Artist</span>
-            <span style={{textAlign:'right'}}>Streams</span>
-            <span style={{textAlign:'right'}}>Daily</span>
-            <span style={{textAlign:'right'}}>TikTok</span>
-            <span style={{textAlign:'right'}}>Instagram</span>
-            <span style={{textAlign:'right'}}>UGC</span>
-            <span></span>
+            <span style={{textAlign:'right'}} className="hide-mobile">Streams</span>
+            <span style={{textAlign:'right'}} className="hide-mobile">Daily</span>
+            <span style={{textAlign:'right'}} className="hide-mobile">TikTok</span>
+            <span style={{textAlign:'right'}} className="hide-mobile">Instagram</span>
+            <span style={{textAlign:'right'}} className="hide-mobile">UGC</span>
+            <span className="hide-mobile"></span>
           </div>
           {/* Rows */}
           {artists.map((a,i)=><Row key={a.id} a={a} rank={i+1} onClick={()=>onSelect(a)}/>)}
@@ -321,24 +383,27 @@ function Grid({artists,onSelect,sortBy,setSortBy}){
 function Row({a,rank,onClick}){
   const ts=totStr(a),dv=dayStr(a),tu=totUGC(a);
   return(
-    <div onClick={onClick} style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr 1fr 1fr 1fr 36px',gap:12,padding:'12px 16px',borderBottom:'1px solid var(--bd-l)',cursor:'pointer',transition:'background .12s'}} onMouseOver={e=>e.currentTarget.style.background='var(--bg-3)'} onMouseOut={e=>e.currentTarget.style.background='transparent'}>
+    <div onClick={onClick} style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr 1fr 1fr 1fr 36px',gap:12,padding:'12px 16px',borderBottom:'1px solid var(--bd-l)',cursor:'pointer',transition:'background .12s'}} className="mobile-full" onMouseOver={e=>e.currentTarget.style.background='var(--bg-3)'} onMouseOut={e=>e.currentTarget.style.background='transparent'}>
       <div style={{display:'flex',alignItems:'center',gap:10}}>
         <span style={{display:'flex',alignItems:'center',justifyContent:'center',width:26,height:26,borderRadius:7,background:rank<=3?'var(--org-l)':'var(--bg-3)',color:rank<=3?'var(--org)':'var(--tx-3)',fontSize:11,fontWeight:700}}>{rank}</span>
-        <div><div style={{fontWeight:600,fontSize:13}}>{a.n}</div><div style={{fontSize:10,color:'var(--tx-3)'}}>{a.sg?.length||0} songs</div></div>
+        <div>
+          <div style={{fontWeight:600,fontSize:13}}>{a.n}</div>
+          <div style={{fontSize:10,color:'var(--tx-3)'}}>{a.sg?.length||0} songs • {fmt(ts)} streams</div>
+        </div>
       </div>
-      <div className="mono" style={{textAlign:'right',fontWeight:600,fontSize:13,alignSelf:'center'}}>{fmt(ts)}</div>
-      <div style={{textAlign:'right',alignSelf:'center'}}><Delta v={dv} sz="sm"/></div>
-      <div className="mono" style={{textAlign:'right',fontSize:12,color:'var(--tx-2)',alignSelf:'center'}}>{fmt(a.m?.tk||0)}</div>
-      <div className="mono" style={{textAlign:'right',fontSize:12,color:'var(--tx-2)',alignSelf:'center'}}>{fmt(a.m?.ig||0)}</div>
-      <div style={{textAlign:'right',alignSelf:'center'}}>
+      <div className="mono hide-mobile" style={{textAlign:'right',fontWeight:600,fontSize:13,alignSelf:'center'}}>{fmt(ts)}</div>
+      <div style={{textAlign:'right',alignSelf:'center'}} className="hide-mobile"><Delta v={dv} sz="sm"/></div>
+      <div className="mono hide-mobile" style={{textAlign:'right',fontSize:12,color:'var(--tx-2)',alignSelf:'center'}}>{fmt(a.m?.tk||0)}</div>
+      <div className="mono hide-mobile" style={{textAlign:'right',fontSize:12,color:'var(--tx-2)',alignSelf:'center'}}>{fmt(a.m?.ig||0)}</div>
+      <div style={{textAlign:'right',alignSelf:'center'}} className="hide-mobile">
         {tu>0?<span className="mono" style={{display:'inline-flex',alignItems:'center',gap:3,padding:'3px 7px',borderRadius:5,background:tu>=1000?'var(--red-l)':'var(--prp-l)',color:tu>=1000?'var(--red)':'var(--prp)',fontSize:11,fontWeight:600}}>{tu>=1000&&I.fire}{fmt(tu)}</span>:<span style={{color:'var(--tx-3)',fontSize:12}}>—</span>}
       </div>
-      <div style={{display:'flex',alignItems:'center',justifyContent:'center',color:'var(--tx-3)'}}>{I.chev}</div>
+      <div style={{display:'flex',alignItems:'center',justifyContent:'center',color:'var(--tx-3)'}} className="hide-mobile">{I.chev}</div>
     </div>
   );
 }
 
-// Artist Detail with clickable stats
+// Artist Detail with mobile-friendly UGC entry
 function Detail({artist:a,onSave,onDel,onBack,onStatClick}){
   const[editSong,setEditSong]=useState(null);
   const[editUGC,setEditUGC]=useState(null);
@@ -353,11 +418,12 @@ function Detail({artist:a,onSave,onDel,onBack,onStatClick}){
   if(!a)return null;
 
   const ts=totStr(a),tu=totUGC(a),dsv=dayStr(a),duv=dayUGC(a);
+  const lastUpdated=getLastUpdated(a);
 
   const addSong=()=>{
     if(!newTitle.trim())return;
     const id='s'+Date.now();
-    onSave({...a,sg:[...(a.sg||[]),{id,t:newTitle.trim(),tkUrl:newTkUrl.trim()}],sm:{...a.sm,[id]:{st:0,ug:0,am:0,yt:0,h:{st:[],ug:[],am:[],yt:[]}}}});
+    onSave({...a,sg:[...(a.sg||[]),{id,t:newTitle.trim(),tkUrl:newTkUrl.trim()}],sm:{...a.sm,[id]:{st:0,ug:0,yt:0,h:{st:[],ug:[],yt:[]}}}});
     setNewTitle('');setNewTkUrl('');setShowAdd(false);
   };
 
@@ -369,9 +435,10 @@ function Detail({artist:a,onSave,onDel,onBack,onStatClick}){
     const val=parseInt(count)||0;
     const today=new Date().toISOString().split('T')[0];
     const sm={...a.sm};
-    if(!sm[id])sm[id]={st:0,ug:0,am:0,yt:0,h:{st:[],ug:[],am:[],yt:[]}};
+    if(!sm[id])sm[id]={st:0,ug:0,yt:0,h:{st:[],ug:[],yt:[]}};
     sm[id].ug=val;
-    if(!sm[id].h)sm[id].h={st:[],ug:[],am:[],yt:[]};
+    if(!sm[id].h)sm[id].h={st:[],ug:[],yt:[]};
+    if(!sm[id].h.ug)sm[id].h.ug=[];
     sm[id].h.ug=[...(sm[id].h.ug||[]),{d:today,v:val}].slice(-90);
     onSave({...a,sm});
     setEditUGC(null);
@@ -379,20 +446,28 @@ function Detail({artist:a,onSave,onDel,onBack,onStatClick}){
 
   const saveLinks=()=>{onSave({...a,l:links});setEditLinks(false)};
 
+  // Convert TikTok web URL to app deep link
+  const getTikTokAppLink=(url)=>{
+    if(!url)return null;
+    // TikTok app can open web URLs directly
+    return url;
+  };
+
   return(
     <div className="fi">
       {/* Header */}
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:20,flexWrap:'wrap',gap:12}}>
         <div>
-          <h1 style={{fontSize:28,fontWeight:800,marginBottom:10}}>{a.n}</h1>
+          <h1 style={{fontSize:24,fontWeight:800,marginBottom:6}}>{a.n}</h1>
+          {lastUpdated&&<p style={{fontSize:11,color:'var(--tx-3)',marginBottom:10,display:'flex',alignItems:'center',gap:4}}>{I.clock}Updated {timeAgo(lastUpdated)}</p>}
           {!editLinks?(
             <div style={{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center'}}>
               {Object.entries(a.l||{}).filter(([_,u])=>u).map(([p,u])=><PBadge key={p} p={p} url={u}/>)}
-              <button onClick={()=>setEditLinks(true)} style={{display:'flex',alignItems:'center',gap:4,padding:'5px 9px',borderRadius:7,border:'1px dashed var(--bd)',background:'transparent',color:'var(--tx-3)',fontSize:11,cursor:'pointer'}}>{I.edit}Edit Links</button>
+              <button onClick={()=>setEditLinks(true)} style={{display:'flex',alignItems:'center',gap:4,padding:'5px 9px',borderRadius:7,border:'1px dashed var(--bd)',background:'transparent',color:'var(--tx-3)',fontSize:11,cursor:'pointer'}}>{I.edit}Edit</button>
             </div>
           ):(
             <div style={{background:'var(--bg-3)',padding:12,borderRadius:10,marginTop:8}}>
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:10}}>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:10}} className="mobile-full">
                 {[['sp','Spotify'],['tk','TikTok'],['ig','Instagram'],['yt','YouTube'],['am','Apple Music']].map(([k,l])=>(
                   <div key={k}>
                     <label style={{fontSize:10,color:'var(--tx-3)',display:'block',marginBottom:3}}>{l}</label>
@@ -401,21 +476,21 @@ function Detail({artist:a,onSave,onDel,onBack,onStatClick}){
                 ))}
               </div>
               <div style={{display:'flex',gap:8}}>
-                <button onClick={saveLinks} style={{padding:'7px 14px',borderRadius:6,border:'none',background:'var(--grn)',color:'#fff',fontSize:11,fontWeight:600,cursor:'pointer'}}>Save Links</button>
+                <button onClick={saveLinks} style={{padding:'7px 14px',borderRadius:6,border:'none',background:'var(--grn)',color:'#fff',fontSize:11,fontWeight:600,cursor:'pointer'}}>Save</button>
                 <button onClick={()=>{setLinks(a.l||{});setEditLinks(false)}} style={{padding:'7px 12px',borderRadius:6,border:'1px solid var(--bd)',background:'transparent',color:'var(--tx-3)',fontSize:11,cursor:'pointer'}}>Cancel</button>
               </div>
             </div>
           )}
         </div>
-        <button onClick={onDel} style={{display:'flex',alignItems:'center',gap:5,padding:'8px 14px',borderRadius:8,border:'1px solid var(--red)',background:'var(--red-l)',color:'var(--red)',fontSize:12,fontWeight:500,cursor:'pointer'}}>{I.trash}Remove</button>
+        <button onClick={onDel} style={{display:'flex',alignItems:'center',gap:5,padding:'8px 14px',borderRadius:8,border:'1px solid var(--red)',background:'var(--red-l)',color:'var(--red)',fontSize:12,fontWeight:500,cursor:'pointer'}}>{I.trash}<span className="hide-mobile">Remove</span></button>
       </div>
 
       {/* Stats - Clickable */}
-      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))',gap:10,marginBottom:24}}>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))',gap:10,marginBottom:24}}>
         <Stat label="Total Streams" value={fmt(ts)} delta={dsv} color="var(--grn)" onClick={()=>onStatClick({title:'Total Streams',artist:a,type:'streams'})}/>
         <Stat label="Monthly" value={fmt(a.m?.ml||0)} icon={I.sp} color="#1DB954"/>
-        <Stat label="TikTok" value={fmt(a.m?.tk||0)} spark={a.h?.tk?.slice(-14)} color="var(--tx-1)" onClick={()=>onStatClick({title:'TikTok Followers',artist:a,type:'tiktok'})}/>
-        <Stat label="Instagram" value={fmt(a.m?.ig||0)} spark={a.h?.ig?.slice(-14)} color="#E1306C" onClick={()=>onStatClick({title:'Instagram Followers',artist:a,type:'instagram'})}/>
+        <Stat label="TikTok" value={fmt(a.m?.tk||0)} spark={a.h?.tk?.slice(-14)} color="var(--tx-1)" onClick={()=>onStatClick({title:'TikTok',artist:a,type:'tiktok'})}/>
+        <Stat label="Instagram" value={fmt(a.m?.ig||0)} spark={a.h?.ig?.slice(-14)} color="#E1306C" onClick={()=>onStatClick({title:'Instagram',artist:a,type:'instagram'})}/>
         <Stat label="Total UGC" value={fmt(tu)} delta={duv} color="var(--prp)" onClick={()=>onStatClick({title:'TikTok UGC',artist:a,type:'ugc'})}/>
         <Stat label="Social Score" value={a.m?.ss||'—'} color="var(--acc)" onClick={()=>onStatClick({title:'Social Score',artist:a,type:'social'})}/>
       </div>
@@ -423,8 +498,8 @@ function Detail({artist:a,onSave,onDel,onBack,onStatClick}){
       {/* Songs */}
       <div style={{background:'var(--bg-2)',borderRadius:14,border:'1px solid var(--bd)',overflow:'hidden'}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'14px 16px',borderBottom:'1px solid var(--bd)'}}>
-          <div><h2 style={{fontSize:14,fontWeight:600}}>Songs</h2><p style={{fontSize:11,color:'var(--tx-3)'}}>{a.sg?.length||0} tracks • UGC can be manually updated</p></div>
-          <button onClick={()=>setShowAdd(true)} style={{display:'flex',alignItems:'center',gap:4,padding:'7px 12px',borderRadius:7,border:'none',background:'var(--acc)',color:'#fff',fontSize:12,fontWeight:500,cursor:'pointer'}}>{I.plus}Add</button>
+          <div><h2 style={{fontSize:14,fontWeight:600}}>Songs</h2><p style={{fontSize:11,color:'var(--tx-3)'}}>{a.sg?.length||0} tracks • Tap UGC to update</p></div>
+          <button onClick={()=>setShowAdd(true)} style={{display:'flex',alignItems:'center',gap:4,padding:'7px 12px',borderRadius:7,border:'none',background:'var(--acc)',color:'#fff',fontSize:12,fontWeight:500,cursor:'pointer'}}>{I.plus}</button>
         </div>
 
         {/* Add Song Form */}
@@ -434,57 +509,68 @@ function Detail({artist:a,onSave,onDel,onBack,onStatClick}){
             <div style={{display:'flex',gap:8}}>
               <input type="text" placeholder="TikTok Sound URL (optional)" value={newTkUrl} onChange={e=>setNewTkUrl(e.target.value)} style={{flex:1,padding:'9px 12px',borderRadius:7,border:'1px solid var(--bd)',background:'var(--bg-2)',color:'var(--tx-1)',fontSize:12}}/>
               <button onClick={addSong} style={{padding:'9px 16px',borderRadius:7,border:'none',background:'var(--grn)',color:'#fff',fontWeight:600,fontSize:12,cursor:'pointer'}}>Add</button>
-              <button onClick={()=>{setShowAdd(false);setNewTitle('');setNewTkUrl('')}} style={{padding:'9px 12px',borderRadius:7,border:'1px solid var(--bd)',background:'transparent',color:'var(--tx-3)',cursor:'pointer'}}>Cancel</button>
+              <button onClick={()=>{setShowAdd(false);setNewTitle('');setNewTkUrl('')}} style={{padding:'9px 12px',borderRadius:7,border:'1px solid var(--bd)',background:'transparent',color:'var(--tx-3)',cursor:'pointer'}}>✕</button>
             </div>
           </div>
         )}
 
-        {/* Songs List */}
+        {/* Songs List - Mobile Optimized */}
         {(!a.sg||a.sg.length===0)?(
-          <div style={{padding:36,textAlign:'center',color:'var(--tx-3)',fontSize:13}}>No songs yet. Add Spotify link and run scraper to auto-populate.</div>
+          <div style={{padding:36,textAlign:'center',color:'var(--tx-3)',fontSize:13}}>No songs yet. Add Spotify link and run scraper.</div>
         ):(
           <div>
-            <div style={{display:'grid',gridTemplateColumns:'2.5fr 1fr 1fr 1fr 1fr 40px',gap:8,padding:'8px 16px',background:'var(--bg-3)',fontSize:10,fontWeight:600,color:'var(--tx-3)',textTransform:'uppercase',letterSpacing:'.5px'}}>
-              <span>Title</span>
-              <span style={{textAlign:'right'}}>Streams</span>
-              <span style={{textAlign:'right'}}>Daily</span>
-              <span style={{textAlign:'right'}}>UGC</span>
-              <span>Sound Link</span>
-              <span></span>
-            </div>
             {a.sg.map(s=>{
               const m=a.sm?.[s.id]||{};
               const sv=vel(m.h?.st,1);
-              const isYT=s.src==='youtube'||s.t?.toLowerCase().includes('official video')||s.t?.toLowerCase().includes('music video');
+              const yv=vel(m.h?.yt,1);
+              const totalStreams=(m.st||0)+(m.yt||0);
               return(
-                <div key={s.id} style={{padding:'10px 16px',borderTop:'1px solid var(--bd-l)'}}>
-                  <div style={{display:'grid',gridTemplateColumns:'2.5fr 1fr 1fr 1fr 1fr 40px',gap:8,alignItems:'center'}}>
-                    <div style={{display:'flex',alignItems:'center',gap:6}}>
-                      {isYT&&<span style={{color:'#FF0000',flexShrink:0}}>{I.yt}</span>}
-                      <span style={{fontWeight:500,fontSize:13}}>{s.t}</span>
+                <div key={s.id} style={{padding:'12px 16px',borderTop:'1px solid var(--bd-l)'}}>
+                  {/* Song Row */}
+                  <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontWeight:500,fontSize:14,marginBottom:4,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.t}</div>
+                      <div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
+                        <span style={{display:'flex',alignItems:'center',gap:3,fontSize:11,color:'var(--tx-2)'}}>{I.sp}<span className="mono">{fmt(m.st||0)}</span></span>
+                        {m.yt>0&&<span style={{display:'flex',alignItems:'center',gap:3,fontSize:11,color:'var(--tx-2)'}}>{I.yt}<span className="mono">{fmt(m.yt)}</span></span>}
+                        <Delta v={sv+yv} sz="sm"/>
+                      </div>
                     </div>
-                    <div className="mono" style={{textAlign:'right',fontWeight:600,fontSize:13}}>{fmt(m.st||0)}</div>
-                    <div style={{textAlign:'right'}}><Delta v={sv} sz="sm"/></div>
-                    <div style={{textAlign:'right'}}>
-                      {editUGC===s.id?(
-                        <input type="number" defaultValue={m.ug||0} style={{width:70,padding:'4px 6px',borderRadius:5,border:'1px solid var(--bd)',background:'var(--bg-1)',color:'var(--tx-1)',fontSize:11,textAlign:'right'}} onKeyDown={e=>{if(e.key==='Enter')saveUGC(s.id,e.target.value);if(e.key==='Escape')setEditUGC(null)}} onBlur={e=>saveUGC(s.id,e.target.value)} autoFocus/>
-                      ):(
-                        <button onClick={()=>setEditUGC(s.id)} className="mono" style={{padding:'3px 7px',borderRadius:5,border:'1px solid var(--bd)',background:m.ug>0?(m.ug>=1000?'var(--red-l)':'var(--prp-l)'):'transparent',color:m.ug>0?(m.ug>=1000?'var(--red)':'var(--prp)'):'var(--tx-3)',fontSize:11,fontWeight:600,cursor:'pointer'}}>{m.ug>0?fmt(m.ug):'—'}</button>
-                      )}
-                    </div>
-                    <div>
-                      {editSong===s.id?(
+                    <button onClick={()=>delSong(s.id)} style={{padding:6,borderRadius:5,border:'none',background:'transparent',color:'var(--tx-3)',cursor:'pointer'}}>{I.trash}</button>
+                  </div>
+                  
+                  {/* UGC + TikTok Link Row - Mobile Friendly */}
+                  <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+                    {/* UGC Count - Tappable */}
+                    {editUGC===s.id?(
+                      <div style={{display:'flex',gap:4,flex:'1 1 120px'}}>
+                        <input type="number" defaultValue={m.ug||0} placeholder="UGC count" style={{flex:1,padding:'8px 10px',borderRadius:6,border:'1px solid var(--bd)',background:'var(--bg-1)',color:'var(--tx-1)',fontSize:14}} onKeyDown={e=>{if(e.key==='Enter')saveUGC(s.id,e.target.value);if(e.key==='Escape')setEditUGC(null)}} autoFocus/>
+                        <button onClick={e=>saveUGC(s.id,e.target.previousSibling.value)} style={{padding:'8px 12px',borderRadius:6,border:'none',background:'var(--grn)',color:'#fff',fontSize:12,cursor:'pointer'}}>✓</button>
+                      </div>
+                    ):(
+                      <button onClick={()=>setEditUGC(s.id)} style={{display:'flex',alignItems:'center',gap:6,padding:'8px 12px',borderRadius:8,border:'1px solid var(--bd)',background:m.ug>0?'var(--prp-l)':'var(--bg-3)',color:m.ug>0?'var(--prp)':'var(--tx-3)',fontSize:13,fontWeight:600,cursor:'pointer'}}>
+                        {I.fire}UGC: <span className="mono">{m.ug||0}</span>
+                      </button>
+                    )}
+
+                    {/* TikTok Sound Link */}
+                    {editSong===s.id?(
+                      <div style={{display:'flex',gap:4,flex:'1 1 200px'}}>
+                        <input type="text" defaultValue={s.tkUrl||''} placeholder="TikTok sound URL" style={{flex:1,padding:'8px 10px',borderRadius:6,border:'1px solid var(--bd)',background:'var(--bg-1)',color:'var(--tx-1)',fontSize:12}} onKeyDown={e=>{if(e.key==='Enter')saveTkUrl(s.id,e.target.value);if(e.key==='Escape')setEditSong(null)}} autoFocus/>
+                        <button onClick={e=>saveTkUrl(s.id,e.target.previousSibling.value)} style={{padding:'8px 12px',borderRadius:6,border:'none',background:'var(--grn)',color:'#fff',fontSize:12,cursor:'pointer'}}>✓</button>
+                      </div>
+                    ):(
+                      s.tkUrl?(
                         <div style={{display:'flex',gap:4}}>
-                          <input type="text" defaultValue={s.tkUrl||''} placeholder="URL" style={{flex:1,padding:'5px 7px',borderRadius:5,border:'1px solid var(--bd)',background:'var(--bg-1)',color:'var(--tx-1)',fontSize:10,minWidth:0}} onKeyDown={e=>{if(e.key==='Enter')saveTkUrl(s.id,e.target.value);if(e.key==='Escape')setEditSong(null)}} autoFocus/>
-                          <button onClick={e=>saveTkUrl(s.id,e.target.previousSibling.value)} style={{padding:'4px 7px',borderRadius:4,border:'none',background:'var(--grn)',color:'#fff',fontSize:10,cursor:'pointer'}}>✓</button>
+                          <a href={s.tkUrl} target="_blank" rel="noopener" style={{display:'flex',alignItems:'center',gap:6,padding:'8px 12px',borderRadius:8,background:'var(--grn-l)',color:'var(--grn)',fontSize:12,fontWeight:500,textDecoration:'none'}}>
+                            {I.tk}Open in TikTok
+                          </a>
+                          <button onClick={()=>setEditSong(s.id)} style={{padding:'8px',borderRadius:6,border:'1px solid var(--bd)',background:'transparent',color:'var(--tx-3)',cursor:'pointer'}}>{I.edit}</button>
                         </div>
                       ):(
-                        <button onClick={()=>setEditSong(s.id)} style={{padding:'3px 7px',borderRadius:5,border:'1px solid var(--bd)',background:s.tkUrl?'var(--grn-l)':'transparent',color:s.tkUrl?'var(--grn)':'var(--tx-3)',fontSize:10,cursor:'pointer'}}>{s.tkUrl?'🎵 Linked':'+ Link'}</button>
-                      )}
-                    </div>
-                    <div style={{textAlign:'center'}}>
-                      <button onClick={()=>delSong(s.id)} style={{padding:4,borderRadius:5,border:'none',background:'transparent',color:'var(--tx-3)',cursor:'pointer'}}>{I.trash}</button>
-                    </div>
+                        <button onClick={()=>setEditSong(s.id)} style={{display:'flex',alignItems:'center',gap:4,padding:'8px 12px',borderRadius:8,border:'1px dashed var(--bd)',background:'transparent',color:'var(--tx-3)',fontSize:12,cursor:'pointer'}}>{I.tk}Add Sound Link</button>
+                      )
+                    )}
                   </div>
                 </div>
               );
@@ -513,12 +599,12 @@ function AddModal({onClose,onAdd,count}){
           <button onClick={onClose} style={{padding:6,borderRadius:6,border:'none',background:'var(--bg-3)',color:'var(--tx-3)',cursor:'pointer'}}>{I.x}</button>
         </div>
         <div style={{padding:18,maxHeight:'60vh',overflow:'auto'}}>
-          <p style={{fontSize:11,color:'var(--tx-3)',marginBottom:14}}>{count}/25 artists • Add links to auto-populate data</p>
+          <p style={{fontSize:11,color:'var(--tx-3)',marginBottom:14}}>{count}/25 artists</p>
           <div style={{marginBottom:14}}>
             <label style={{display:'block',fontSize:11,fontWeight:500,color:'var(--tx-2)',marginBottom:5}}>Artist Name *</label>
             <input type="text" value={f.n} onChange={e=>setF({...f,n:e.target.value})} placeholder="Enter name" style={{width:'100%',padding:'11px 13px',borderRadius:8,border:'1px solid var(--bd)',background:'var(--bg-3)',color:'var(--tx-1)',fontSize:13}}/>
           </div>
-          <p style={{fontSize:10,color:'var(--tx-3)',marginBottom:10,padding:8,background:'var(--bg-3)',borderRadius:6}}>💡 Add platform links below. The scraper will automatically pull: song names, stream counts, follower counts, and more.</p>
+          <p style={{fontSize:10,color:'var(--tx-3)',marginBottom:10,padding:8,background:'var(--bg-3)',borderRadius:6}}>💡 Add Spotify link to auto-import songs. Social links to track followers.</p>
           {[['sp','Spotify',I.sp,'open.spotify.com/artist/...'],['tk','TikTok',I.tk,'tiktok.com/@...'],['ig','Instagram',I.ig,'instagram.com/...'],['yt','YouTube',I.yt,'youtube.com/@...'],['am','Apple Music',I.am,'music.apple.com/artist/...']].map(([k,l,ic,ph])=>(
             <div key={k} style={{marginBottom:10}}>
               <label style={{display:'flex',alignItems:'center',gap:5,fontSize:11,fontWeight:500,color:'var(--tx-2)',marginBottom:5}}>{ic}{l}</label>
