@@ -523,7 +523,7 @@ function Detail({artist:a,onSave,onDel,onBack,onStatClick}){
             {/* Table Header - Desktop */}
             <div className="hide-mobile" style={{display:'grid',gridTemplateColumns:'2.5fr 1fr 1fr 80px 120px 40px',gap:12,padding:'10px 16px',background:'var(--bg-3)',fontSize:10,fontWeight:600,color:'var(--tx-3)',textTransform:'uppercase',letterSpacing:'.5px'}}>
               <span>Title</span>
-              <span style={{textAlign:'right'}}>Streams</span>
+              <span style={{textAlign:'right'}}>Streams/Views</span>
               <span style={{textAlign:'right'}}>Daily</span>
               <span style={{textAlign:'center'}}>UGC</span>
               <span>Sound Link</span>
@@ -531,36 +531,37 @@ function Detail({artist:a,onSave,onDel,onBack,onStatClick}){
             </div>
             {a.sg.map(s=>{
               const m=a.sm?.[s.id]||{};
-              const sv=vel(m.h?.st,1);
-              const yv=vel(m.h?.yt,1);
-              const totalStreams=(m.st||0)+(m.yt||0);
-              const totalDaily=sv+yv;
+              const isYouTube = s.src === 'yt';
+              const streams = isYouTube ? (m.yt||0) : (m.st||0);
+              const daily = isYouTube ? vel(m.h?.yt,1) : vel(m.h?.st,1);
               return(
                 <div key={s.id} style={{borderTop:'1px solid var(--bd-l)'}}>
                   {/* Desktop Row */}
                   <div className="hide-mobile" style={{display:'grid',gridTemplateColumns:'2.5fr 1fr 1fr 80px 120px 40px',gap:12,padding:'12px 16px',alignItems:'center'}}>
-                    <div>
+                    <div style={{display:'flex',alignItems:'center',gap:8}}>
+                      {isYouTube ? I.yt : I.sp}
                       <div style={{fontWeight:500,fontSize:13}}>{s.t}</div>
-                      {m.yt>0&&<div style={{display:'flex',alignItems:'center',gap:4,marginTop:2,fontSize:10,color:'var(--tx-3)'}}>{I.yt}<span className="mono">{fmt(m.yt)} views</span></div>}
                     </div>
-                    <div className="mono" style={{textAlign:'right',fontWeight:600,fontSize:13}}>{fmt(m.st||0)}</div>
-                    <div style={{textAlign:'right'}}><Delta v={totalDaily} sz="sm"/></div>
+                    <div className="mono" style={{textAlign:'right',fontWeight:600,fontSize:13}}>{fmt(streams)}</div>
+                    <div style={{textAlign:'right'}}><Delta v={daily} sz="sm"/></div>
                     <div style={{textAlign:'center'}}>
-                      {editUGC===s.id?(
+                      {!isYouTube && (editUGC===s.id?(
                         <input type="number" defaultValue={m.ug||0} style={{width:60,padding:'4px 6px',borderRadius:5,border:'1px solid var(--bd)',background:'var(--bg-1)',color:'var(--tx-1)',fontSize:12,textAlign:'center'}} onKeyDown={e=>{if(e.key==='Enter')saveUGC(s.id,e.target.value);if(e.key==='Escape')setEditUGC(null)}} onBlur={e=>saveUGC(s.id,e.target.value)} autoFocus/>
                       ):(
                         <button onClick={()=>setEditUGC(s.id)} className="mono" style={{padding:'4px 8px',borderRadius:5,border:'1px solid var(--bd)',background:m.ug>0?'var(--prp-l)':'transparent',color:m.ug>0?'var(--prp)':'var(--tx-3)',fontSize:12,fontWeight:600,cursor:'pointer',minWidth:40}}>{m.ug||'—'}</button>
-                      )}
+                      ))}
+                      {isYouTube && <span style={{color:'var(--tx-3)'}}>—</span>}
                     </div>
                     <div>
-                      {editSong===s.id?(
+                      {!isYouTube && (editSong===s.id?(
                         <div style={{display:'flex',gap:4}}>
                           <input type="text" defaultValue={s.tkUrl||''} placeholder="URL" style={{width:80,padding:'4px 6px',borderRadius:5,border:'1px solid var(--bd)',background:'var(--bg-1)',color:'var(--tx-1)',fontSize:10}} onKeyDown={e=>{if(e.key==='Enter')saveTkUrl(s.id,e.target.value);if(e.key==='Escape')setEditSong(null)}} autoFocus/>
                           <button onClick={e=>saveTkUrl(s.id,e.target.previousSibling.value)} style={{padding:'4px 8px',borderRadius:4,border:'none',background:'var(--grn)',color:'#fff',fontSize:10,cursor:'pointer'}}>✓</button>
                         </div>
                       ):(
                         <button onClick={()=>setEditSong(s.id)} style={{padding:'4px 8px',borderRadius:5,border:'1px solid var(--bd)',background:s.tkUrl?'var(--grn-l)':'transparent',color:s.tkUrl?'var(--grn)':'var(--tx-3)',fontSize:11,cursor:'pointer'}}>{s.tkUrl?'🎵 Linked':'+ Link'}</button>
-                      )}
+                      ))}
+                      {isYouTube && <span style={{color:'var(--tx-3)',fontSize:10}}>YT Video</span>}
                     </div>
                     <div style={{textAlign:'center'}}>
                       <button onClick={()=>delSong(s.id)} style={{padding:4,borderRadius:5,border:'none',background:'transparent',color:'var(--tx-3)',cursor:'pointer'}}>{I.trash}</button>
@@ -571,44 +572,48 @@ function Detail({artist:a,onSave,onDel,onBack,onStatClick}){
                   <div className="show-mobile" style={{padding:'12px 16px'}}>
                     <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
                       <div style={{flex:1,minWidth:0}}>
-                        <div style={{fontWeight:500,fontSize:14,marginBottom:4,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.t}</div>
+                        <div style={{display:'flex',alignItems:'center',gap:6,fontWeight:500,fontSize:14,marginBottom:4}}>
+                          {isYouTube ? I.yt : I.sp}
+                          <span style={{overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.t}</span>
+                        </div>
                         <div style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
-                          <span style={{display:'flex',alignItems:'center',gap:3,fontSize:11,color:'var(--tx-2)'}}>{I.sp}<span className="mono">{fmt(m.st||0)}</span></span>
-                          {m.yt>0&&<span style={{display:'flex',alignItems:'center',gap:3,fontSize:11,color:'var(--tx-2)'}}>{I.yt}<span className="mono">{fmt(m.yt)}</span></span>}
-                          <Delta v={totalDaily} sz="sm"/>
+                          <span className="mono" style={{fontSize:12,color:'var(--tx-2)'}}>{fmt(streams)} {isYouTube?'views':'streams'}</span>
+                          <Delta v={daily} sz="sm"/>
                         </div>
                       </div>
                       <button onClick={()=>delSong(s.id)} style={{padding:6,borderRadius:5,border:'none',background:'transparent',color:'var(--tx-3)',cursor:'pointer'}}>{I.trash}</button>
                     </div>
-                    <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
-                      {editUGC===s.id?(
-                        <div style={{display:'flex',gap:4,flex:'1 1 120px'}}>
-                          <input type="number" defaultValue={m.ug||0} placeholder="UGC" style={{flex:1,padding:'8px 10px',borderRadius:6,border:'1px solid var(--bd)',background:'var(--bg-1)',color:'var(--tx-1)',fontSize:14}} onKeyDown={e=>{if(e.key==='Enter')saveUGC(s.id,e.target.value);if(e.key==='Escape')setEditUGC(null)}} autoFocus/>
-                          <button onClick={e=>saveUGC(s.id,e.target.previousSibling.value)} style={{padding:'8px 12px',borderRadius:6,border:'none',background:'var(--grn)',color:'#fff',fontSize:12,cursor:'pointer'}}>✓</button>
-                        </div>
-                      ):(
-                        <button onClick={()=>setEditUGC(s.id)} style={{display:'flex',alignItems:'center',gap:6,padding:'8px 12px',borderRadius:8,border:'1px solid var(--bd)',background:m.ug>0?'var(--prp-l)':'var(--bg-3)',color:m.ug>0?'var(--prp)':'var(--tx-3)',fontSize:13,fontWeight:600,cursor:'pointer'}}>
-                          {I.fire}UGC: <span className="mono">{m.ug||0}</span>
-                        </button>
-                      )}
-                      {editSong===s.id?(
-                        <div style={{display:'flex',gap:4,flex:'1 1 200px'}}>
-                          <input type="text" defaultValue={s.tkUrl||''} placeholder="TikTok sound URL" style={{flex:1,padding:'8px 10px',borderRadius:6,border:'1px solid var(--bd)',background:'var(--bg-1)',color:'var(--tx-1)',fontSize:12}} onKeyDown={e=>{if(e.key==='Enter')saveTkUrl(s.id,e.target.value);if(e.key==='Escape')setEditSong(null)}} autoFocus/>
-                          <button onClick={e=>saveTkUrl(s.id,e.target.previousSibling.value)} style={{padding:'8px 12px',borderRadius:6,border:'none',background:'var(--grn)',color:'#fff',fontSize:12,cursor:'pointer'}}>✓</button>
-                        </div>
-                      ):(
-                        s.tkUrl?(
-                          <div style={{display:'flex',gap:4}}>
-                            <a href={s.tkUrl} target="_blank" rel="noopener" style={{display:'flex',alignItems:'center',gap:6,padding:'8px 12px',borderRadius:8,background:'var(--grn-l)',color:'var(--grn)',fontSize:12,fontWeight:500,textDecoration:'none'}}>
-                              {I.tk}Open in TikTok
-                            </a>
-                            <button onClick={()=>setEditSong(s.id)} style={{padding:'8px',borderRadius:6,border:'1px solid var(--bd)',background:'transparent',color:'var(--tx-3)',cursor:'pointer'}}>{I.edit}</button>
+                    {!isYouTube && (
+                      <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+                        {editUGC===s.id?(
+                          <div style={{display:'flex',gap:4,flex:'1 1 120px'}}>
+                            <input type="number" defaultValue={m.ug||0} placeholder="UGC" style={{flex:1,padding:'8px 10px',borderRadius:6,border:'1px solid var(--bd)',background:'var(--bg-1)',color:'var(--tx-1)',fontSize:14}} onKeyDown={e=>{if(e.key==='Enter')saveUGC(s.id,e.target.value);if(e.key==='Escape')setEditUGC(null)}} autoFocus/>
+                            <button onClick={e=>saveUGC(s.id,e.target.previousSibling.value)} style={{padding:'8px 12px',borderRadius:6,border:'none',background:'var(--grn)',color:'#fff',fontSize:12,cursor:'pointer'}}>✓</button>
                           </div>
                         ):(
-                          <button onClick={()=>setEditSong(s.id)} style={{display:'flex',alignItems:'center',gap:4,padding:'8px 12px',borderRadius:8,border:'1px dashed var(--bd)',background:'transparent',color:'var(--tx-3)',fontSize:12,cursor:'pointer'}}>{I.tk}Add Sound Link</button>
-                        )
-                      )}
-                    </div>
+                          <button onClick={()=>setEditUGC(s.id)} style={{display:'flex',alignItems:'center',gap:6,padding:'8px 12px',borderRadius:8,border:'1px solid var(--bd)',background:m.ug>0?'var(--prp-l)':'var(--bg-3)',color:m.ug>0?'var(--prp)':'var(--tx-3)',fontSize:13,fontWeight:600,cursor:'pointer'}}>
+                            {I.fire}UGC: <span className="mono">{m.ug||0}</span>
+                          </button>
+                        )}
+                        {editSong===s.id?(
+                          <div style={{display:'flex',gap:4,flex:'1 1 200px'}}>
+                            <input type="text" defaultValue={s.tkUrl||''} placeholder="TikTok sound URL" style={{flex:1,padding:'8px 10px',borderRadius:6,border:'1px solid var(--bd)',background:'var(--bg-1)',color:'var(--tx-1)',fontSize:12}} onKeyDown={e=>{if(e.key==='Enter')saveTkUrl(s.id,e.target.value);if(e.key==='Escape')setEditSong(null)}} autoFocus/>
+                            <button onClick={e=>saveTkUrl(s.id,e.target.previousSibling.value)} style={{padding:'8px 12px',borderRadius:6,border:'none',background:'var(--grn)',color:'#fff',fontSize:12,cursor:'pointer'}}>✓</button>
+                          </div>
+                        ):(
+                          s.tkUrl?(
+                            <div style={{display:'flex',gap:4}}>
+                              <a href={s.tkUrl} target="_blank" rel="noopener" style={{display:'flex',alignItems:'center',gap:6,padding:'8px 12px',borderRadius:8,background:'var(--grn-l)',color:'var(--grn)',fontSize:12,fontWeight:500,textDecoration:'none'}}>
+                                {I.tk}Open in TikTok
+                              </a>
+                              <button onClick={()=>setEditSong(s.id)} style={{padding:'8px',borderRadius:6,border:'1px solid var(--bd)',background:'transparent',color:'var(--tx-3)',cursor:'pointer'}}>{I.edit}</button>
+                            </div>
+                          ):(
+                            <button onClick={()=>setEditSong(s.id)} style={{display:'flex',alignItems:'center',gap:4,padding:'8px 12px',borderRadius:8,border:'1px dashed var(--bd)',background:'transparent',color:'var(--tx-3)',fontSize:12,cursor:'pointer'}}>{I.tk}Add Sound Link</button>
+                          )
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               );
