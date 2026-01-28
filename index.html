@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>A&R Scouting Dashboard</title>
+  <title>A&R Dashboard</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0%25' y1='0%25' x2='100%25' y2='100%25'%3E%3Cstop offset='0%25' style='stop-color:%233b82f6'/%3E%3Cstop offset='100%25' style='stop-color:%238b5cf6'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='100' height='100' rx='20' fill='url(%23g)'/%3E%3Ctext x='50' y='68' text-anchor='middle' fill='white' font-family='system-ui' font-weight='bold' font-size='40'%3EA%26R%3C/text%3E%3C/svg%3E">
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -55,32 +56,44 @@ const timeAgo=d=>{if(!d)return'Never';const now=new Date(),then=new Date(d),diff
 const getSpotifyStreams=a=>a.sm?Object.values(a.sm).reduce((s,x)=>s+(x.st||0),0):0;
 const getYTViews=a=>a.sm?Object.values(a.sm).reduce((s,x)=>s+(x.yt||0),0):0;
 const totStr=a=>getSpotifyStreams(a)+getYTViews(a);
-const totUGC=a=>a.sm?Object.values(a.sm).reduce((s,x)=>s+(x.ug||0),0):0;
+const totTkUGC=a=>a.sm?Object.values(a.sm).reduce((s,x)=>s+(x.ug||0),0):0;
+const totIgUGC=a=>a.m?.igu||0;
+const totUGC=a=>totTkUGC(a)+totIgUGC(a);
 const dayStr=a=>a.sm?Object.values(a.sm).reduce((s,x)=>s+vel(x.h?.st,1)+vel(x.h?.yt,1),0):0;
 const weekStr=a=>a.sm?Object.values(a.sm).reduce((s,x)=>s+vel(x.h?.st,7)+vel(x.h?.yt,7),0):0;
-const dayUGC=a=>a.sm?Object.values(a.sm).reduce((s,x)=>s+vel(x.h?.ug,1),0):0;
+const dayTkUGC=a=>a.sm?Object.values(a.sm).reduce((s,x)=>s+vel(x.h?.ug,1),0):0;
+const dayIgUGC=a=>vel(a.h?.igu,1);
+const dayUGC=a=>dayTkUGC(a)+dayIgUGC(a);
 
 // Get last updated timestamp from artist data
 const getLastUpdated=a=>{
-  if(!a.sm)return null;
+  // Check for explicit lastUpdated timestamp first
+  if(a.lastUpdated) return a.lastUpdated;
+  
   let latest=null;
-  Object.values(a.sm).forEach(m=>{
-    ['st','yt','ug'].forEach(k=>{
-      const h=m.h?.[k];
-      if(h&&h.length>0){
-        const last=h[h.length-1]?.d;
-        if(last&&(!latest||last>latest))latest=last;
-      }
+  
+  // Check song metrics history
+  if(a.sm){
+    Object.values(a.sm).forEach(m=>{
+      ['st','yt','ug'].forEach(k=>{
+        const h=m.h?.[k];
+        if(h&&h.length>0){
+          const last=h[h.length-1]?.d;
+          if(last&&(!latest||last>latest))latest=last;
+        }
+      });
     });
-  });
-  // Also check social history
-  ['tk','ig'].forEach(k=>{
+  }
+  
+  // Check social history (followers, posts)
+  ['tk','ig','sf','yt','tpt','ipt'].forEach(k=>{
     const h=a.h?.[k];
     if(h&&h.length>0){
       const last=h[h.length-1]?.d;
       if(last&&(!latest||last>latest))latest=last;
     }
   });
+  
   return latest;
 };
 
@@ -175,9 +188,11 @@ function StatsModal({title,artist,type,onClose}){
       return{total,daily,weekly,postsWk,desc:'Total Instagram followers'};
     }
     if(type==='ugc'){
-      const total=totUGC(a);
+      const tkUgc=totTkUGC(a);
+      const igUgc=totIgUGC(a);
+      const total=tkUgc+igUgc;
       const daily=dayUGC(a);
-      return{total,daily,weekly:0,desc:'Total TikTok videos using artist sounds. Tap UGC count on songs to update manually.'};
+      return{total,daily,weekly:0,tkUgc,igUgc,desc:'Total videos using artist sounds across TikTok and Instagram Reels.'};
     }
     if(type==='social'){
       // Calculate posts per day/week/month from history
@@ -270,6 +285,24 @@ function StatsModal({title,artist,type,onClose}){
             <div style={{padding:12,borderRadius:10,background:'var(--acc-l)',marginTop:8}}>
               <div style={{fontSize:10,color:'var(--acc)',textTransform:'uppercase',marginBottom:4}}>Posts/Week</div>
               <div className="mono" style={{fontSize:20,fontWeight:700,color:'var(--acc)'}}>{data.postsWk}</div>
+            </div>
+          )}
+
+          {/* UGC breakdown - TikTok + Instagram */}
+          {type==='ugc'&&(
+            <div>
+              <h3 style={{fontSize:12,fontWeight:600,color:'var(--tx-2)',marginBottom:10}}>Breakdown by Platform</h3>
+              <div style={{display:'flex',flexDirection:'column',gap:8}}>
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 12px',borderRadius:8,background:'var(--bg-3)'}}>
+                  <div style={{display:'flex',alignItems:'center',gap:8}}>{I.tk}<span style={{fontSize:13}}>TikTok UGC</span></div>
+                  <span className="mono" style={{fontWeight:600}}>{fmt(data.tkUgc||0)}</span>
+                </div>
+                <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 12px',borderRadius:8,background:'var(--bg-3)'}}>
+                  <div style={{display:'flex',alignItems:'center',gap:8}}>{I.ig}<span style={{fontSize:13}}>Instagram Reels</span></div>
+                  <span className="mono" style={{fontWeight:600}}>{fmt(data.igUgc||0)}</span>
+                </div>
+              </div>
+              <p style={{fontSize:10,color:'var(--tx-3)',marginTop:10}}>TikTok: Tap UGC on songs to update. Instagram: Use extension to capture from Reels audio page.</p>
             </div>
           )}
 
@@ -371,7 +404,14 @@ function App(){
       <header style={{position:'sticky',top:0,zIndex:100,background:'var(--bg-2)',borderBottom:'1px solid var(--bd)',padding:'10px 20px'}}>
         <div style={{maxWidth:1400,margin:'0 auto',display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,flexWrap:'wrap'}}>
           <div style={{display:'flex',alignItems:'center',gap:16}}>
-            <h1 style={{fontSize:17,fontWeight:700,display:'flex',alignItems:'center',gap:8}}><span style={{fontSize:22}}>🎵</span><span className="hide-mobile">A&R Dashboard</span></h1>
+            <h1 style={{fontSize:17,fontWeight:700,display:'flex',alignItems:'center',gap:10}}>
+              <svg width="32" height="32" viewBox="0 0 100 100">
+                <defs><linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" style={{stopColor:'#3b82f6'}}/><stop offset="100%" style={{stopColor:'#8b5cf6'}}/></linearGradient></defs>
+                <rect width="100" height="100" rx="20" fill="url(#logoGrad)"/>
+                <text x="50" y="68" textAnchor="middle" fill="white" fontFamily="system-ui" fontWeight="bold" fontSize="40">A&R</text>
+              </svg>
+              <span className="hide-mobile">Dashboard</span>
+            </h1>
             {sel&&<button onClick={()=>setSel(null)} style={{display:'flex',alignItems:'center',gap:5,padding:'7px 12px',borderRadius:8,border:'none',background:'var(--bg-3)',color:'var(--tx-2)',fontSize:12,fontWeight:500,cursor:'pointer'}}>{I.back}<span className="hide-mobile">All Artists</span></button>}
           </div>
           <div style={{display:'flex',alignItems:'center',gap:10}}>
@@ -589,7 +629,7 @@ function Detail({artist:a,onSave,onDel,onBack,onStatClick}){
               <span style={{textAlign:'right'}}>Streams/Views</span>
               <span style={{textAlign:'right'}}>Daily</span>
               <span style={{textAlign:'center'}}>UGC</span>
-              <span>Sound Link</span>
+              <span>TikTok Sound</span>
               <span></span>
             </div>
             {a.sg.map(s=>{
@@ -710,7 +750,7 @@ function AddModal({onClose,onAdd,count}){
             <label style={{display:'block',fontSize:11,fontWeight:500,color:'var(--tx-2)',marginBottom:5}}>Artist Name *</label>
             <input type="text" value={f.n} onChange={e=>setF({...f,n:e.target.value})} placeholder="Enter name" style={{width:'100%',padding:'11px 13px',borderRadius:8,border:'1px solid var(--bd)',background:'var(--bg-3)',color:'var(--tx-1)',fontSize:13}}/>
           </div>
-          <p style={{fontSize:10,color:'var(--tx-3)',marginBottom:10,padding:8,background:'var(--bg-3)',borderRadius:6}}>💡 Add Spotify link to auto-import songs. Social links to track followers.</p>
+          <p style={{fontSize:10,color:'var(--tx-3)',marginBottom:10,padding:8,background:'var(--bg-3)',borderRadius:6}}>💡 Add platform links to track followers and metrics. Use the Chrome extension to capture data.</p>
           {[['sp','Spotify',I.sp,'open.spotify.com/artist/...'],['tk','TikTok',I.tk,'tiktok.com/@...'],['ig','Instagram',I.ig,'instagram.com/...'],['yt','YouTube',I.yt,'youtube.com/@...'],['am','Apple Music',I.am,'music.apple.com/artist/...']].map(([k,l,ic,ph])=>(
             <div key={k} style={{marginBottom:10}}>
               <label style={{display:'flex',alignItems:'center',gap:5,fontSize:11,fontWeight:500,color:'var(--tx-2)',marginBottom:5}}>{ic}{l}</label>
