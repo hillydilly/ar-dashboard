@@ -57,12 +57,12 @@ const getSpotifyStreams=a=>a.sm?Object.values(a.sm).reduce((s,x)=>s+(x.st||0),0)
 const getYTViews=a=>a.sm?Object.values(a.sm).reduce((s,x)=>s+(x.yt||0),0):0;
 const totStr=a=>getSpotifyStreams(a)+getYTViews(a);
 const totTkUGC=a=>a.sm?Object.values(a.sm).reduce((s,x)=>s+(x.ug||0),0):0;
-const totIgUGC=a=>a.m?.igu||0;
+const totIgUGC=a=>a.sm?Object.values(a.sm).reduce((s,x)=>s+(x.igu||0),0):0;
 const totUGC=a=>totTkUGC(a)+totIgUGC(a);
 const dayStr=a=>a.sm?Object.values(a.sm).reduce((s,x)=>s+vel(x.h?.st,1)+vel(x.h?.yt,1),0):0;
 const weekStr=a=>a.sm?Object.values(a.sm).reduce((s,x)=>s+vel(x.h?.st,7)+vel(x.h?.yt,7),0):0;
 const dayTkUGC=a=>a.sm?Object.values(a.sm).reduce((s,x)=>s+vel(x.h?.ug,1),0):0;
-const dayIgUGC=a=>vel(a.h?.igu,1);
+const dayIgUGC=a=>a.sm?Object.values(a.sm).reduce((s,x)=>s+vel(x.h?.igu,1),0):0;
 const dayUGC=a=>dayTkUGC(a)+dayIgUGC(a);
 
 // Get last updated timestamp from artist data
@@ -511,6 +511,8 @@ function Row({a,rank,onClick}){
 function Detail({artist:a,onSave,onDel,onBack,onStatClick}){
   const[editSong,setEditSong]=useState(null);
   const[editUGC,setEditUGC]=useState(null);
+  const[editIgUGC,setEditIgUGC]=useState(null);
+  const[editIgUrl,setEditIgUrl]=useState(null);
   const[newTitle,setNewTitle]=useState('');
   const[newTkUrl,setNewTkUrl]=useState('');
   const[showAdd,setShowAdd]=useState(false);
@@ -527,25 +529,40 @@ function Detail({artist:a,onSave,onDel,onBack,onStatClick}){
   const addSong=()=>{
     if(!newTitle.trim())return;
     const id='s'+Date.now();
-    onSave({...a,sg:[...(a.sg||[]),{id,t:newTitle.trim(),tkUrl:newTkUrl.trim()}],sm:{...a.sm,[id]:{st:0,ug:0,yt:0,h:{st:[],ug:[],yt:[]}}}});
+    onSave({...a,sg:[...(a.sg||[]),{id,t:newTitle.trim(),tkUrl:newTkUrl.trim()}],sm:{...a.sm,[id]:{st:0,ug:0,igu:0,yt:0,h:{st:[],ug:[],igu:[],yt:[]}}}});
     setNewTitle('');setNewTkUrl('');setShowAdd(false);
   };
 
   const delSong=id=>{if(!confirm('Remove song?'))return;const{[id]:_,...rest}=a.sm||{};onSave({...a,sg:a.sg.filter(s=>s.id!==id),sm:rest})};
 
   const saveTkUrl=(id,url)=>{onSave({...a,sg:a.sg.map(s=>s.id===id?{...s,tkUrl:url}:s)});setEditSong(null)};
+  
+  const saveIgUrl=(id,url)=>{onSave({...a,sg:a.sg.map(s=>s.id===id?{...s,igUrl:url}:s)});setEditIgUrl(null)};
 
   const saveUGC=(id,count)=>{
     const val=parseInt(count)||0;
     const today=new Date().toISOString().split('T')[0];
     const sm={...a.sm};
-    if(!sm[id])sm[id]={st:0,ug:0,yt:0,h:{st:[],ug:[],yt:[]}};
+    if(!sm[id])sm[id]={st:0,ug:0,igu:0,yt:0,h:{st:[],ug:[],igu:[],yt:[]}};
     sm[id].ug=val;
-    if(!sm[id].h)sm[id].h={st:[],ug:[],yt:[]};
+    if(!sm[id].h)sm[id].h={st:[],ug:[],igu:[],yt:[]};
     if(!sm[id].h.ug)sm[id].h.ug=[];
     sm[id].h.ug=[...(sm[id].h.ug||[]),{d:today,v:val}].slice(-90);
     onSave({...a,sm});
     setEditUGC(null);
+  };
+  
+  const saveIgUGC=(id,count)=>{
+    const val=parseInt(count)||0;
+    const today=new Date().toISOString().split('T')[0];
+    const sm={...a.sm};
+    if(!sm[id])sm[id]={st:0,ug:0,igu:0,yt:0,h:{st:[],ug:[],igu:[],yt:[]}};
+    sm[id].igu=val;
+    if(!sm[id].h)sm[id].h={st:[],ug:[],igu:[],yt:[]};
+    if(!sm[id].h.igu)sm[id].h.igu=[];
+    sm[id].h.igu=[...(sm[id].h.igu||[]),{d:today,v:val}].slice(-90);
+    onSave({...a,sm});
+    setEditIgUGC(null);
   };
 
   const saveLinks=()=>{onSave({...a,l:links});setEditLinks(false)};
@@ -624,12 +641,14 @@ function Detail({artist:a,onSave,onDel,onBack,onStatClick}){
         ):(
           <div>
             {/* Table Header - Desktop */}
-            <div className="hide-mobile" style={{display:'grid',gridTemplateColumns:'2.5fr 1fr 1fr 80px 120px 40px',gap:12,padding:'10px 16px',background:'var(--bg-3)',fontSize:10,fontWeight:600,color:'var(--tx-3)',textTransform:'uppercase',letterSpacing:'.5px'}}>
+            <div className="hide-mobile" style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr 70px 70px 100px 100px 36px',gap:8,padding:'10px 16px',background:'var(--bg-3)',fontSize:9,fontWeight:600,color:'var(--tx-3)',textTransform:'uppercase',letterSpacing:'.5px'}}>
               <span>Title</span>
-              <span style={{textAlign:'right'}}>Streams/Views</span>
+              <span style={{textAlign:'right'}}>Streams</span>
               <span style={{textAlign:'right'}}>Daily</span>
-              <span style={{textAlign:'center'}}>UGC</span>
+              <span style={{textAlign:'center'}}>TK UGC</span>
+              <span style={{textAlign:'center'}}>IG UGC</span>
               <span>TikTok Sound</span>
+              <span>IG Sound</span>
               <span></span>
             </div>
             {a.sg.map(s=>{
@@ -640,31 +659,54 @@ function Detail({artist:a,onSave,onDel,onBack,onStatClick}){
               return(
                 <div key={s.id} style={{borderTop:'1px solid var(--bd-l)'}}>
                   {/* Desktop Row */}
-                  <div className="hide-mobile" style={{display:'grid',gridTemplateColumns:'2.5fr 1fr 1fr 80px 120px 40px',gap:12,padding:'12px 16px',alignItems:'center'}}>
+                  <div className="hide-mobile" style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr 70px 70px 100px 100px 36px',gap:8,padding:'12px 16px',alignItems:'center'}}>
                     <div style={{display:'flex',alignItems:'center',gap:8}}>
                       {isYouTube ? I.yt : I.sp}
-                      <div style={{fontWeight:500,fontSize:13}}>{s.t}</div>
+                      <div style={{fontWeight:500,fontSize:13,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{s.t}</div>
                     </div>
                     <div className="mono" style={{textAlign:'right',fontWeight:600,fontSize:13}}>{fmt(streams)}</div>
                     <div style={{textAlign:'right'}}><Delta v={daily} sz="sm"/></div>
+                    {/* TikTok UGC */}
                     <div style={{textAlign:'center'}}>
                       {!isYouTube && (editUGC===s.id?(
-                        <input type="number" defaultValue={m.ug||0} style={{width:60,padding:'4px 6px',borderRadius:5,border:'1px solid var(--bd)',background:'var(--bg-1)',color:'var(--tx-1)',fontSize:12,textAlign:'center'}} onKeyDown={e=>{if(e.key==='Enter')saveUGC(s.id,e.target.value);if(e.key==='Escape')setEditUGC(null)}} onBlur={e=>saveUGC(s.id,e.target.value)} autoFocus/>
+                        <input type="number" defaultValue={m.ug||0} style={{width:50,padding:'4px 6px',borderRadius:5,border:'1px solid var(--bd)',background:'var(--bg-1)',color:'var(--tx-1)',fontSize:11,textAlign:'center'}} onKeyDown={e=>{if(e.key==='Enter')saveUGC(s.id,e.target.value);if(e.key==='Escape')setEditUGC(null)}} onBlur={e=>saveUGC(s.id,e.target.value)} autoFocus/>
                       ):(
-                        <button onClick={()=>setEditUGC(s.id)} className="mono" style={{padding:'4px 8px',borderRadius:5,border:'1px solid var(--bd)',background:m.ug>0?'var(--prp-l)':'transparent',color:m.ug>0?'var(--prp)':'var(--tx-3)',fontSize:12,fontWeight:600,cursor:'pointer',minWidth:40}}>{m.ug||'—'}</button>
+                        <button onClick={()=>setEditUGC(s.id)} className="mono" style={{padding:'3px 6px',borderRadius:5,border:'1px solid var(--bd)',background:m.ug>0?'var(--prp-l)':'transparent',color:m.ug>0?'var(--prp)':'var(--tx-3)',fontSize:11,fontWeight:600,cursor:'pointer',minWidth:36}}>{m.ug||'—'}</button>
                       ))}
-                      {isYouTube && <span style={{color:'var(--tx-3)'}}>—</span>}
+                      {isYouTube && <span style={{color:'var(--tx-3)',fontSize:10}}>—</span>}
                     </div>
+                    {/* Instagram UGC */}
+                    <div style={{textAlign:'center'}}>
+                      {!isYouTube && (editIgUGC===s.id?(
+                        <input type="number" defaultValue={m.igu||0} style={{width:50,padding:'4px 6px',borderRadius:5,border:'1px solid var(--bd)',background:'var(--bg-1)',color:'var(--tx-1)',fontSize:11,textAlign:'center'}} onKeyDown={e=>{if(e.key==='Enter')saveIgUGC(s.id,e.target.value);if(e.key==='Escape')setEditIgUGC(null)}} onBlur={e=>saveIgUGC(s.id,e.target.value)} autoFocus/>
+                      ):(
+                        <button onClick={()=>setEditIgUGC(s.id)} className="mono" style={{padding:'3px 6px',borderRadius:5,border:'1px solid var(--bd)',background:m.igu>0?'#E1306C22':'transparent',color:m.igu>0?'#E1306C':'var(--tx-3)',fontSize:11,fontWeight:600,cursor:'pointer',minWidth:36}}>{m.igu||'—'}</button>
+                      ))}
+                      {isYouTube && <span style={{color:'var(--tx-3)',fontSize:10}}>—</span>}
+                    </div>
+                    {/* TikTok Sound Link */}
                     <div>
                       {!isYouTube && (editSong===s.id?(
                         <div style={{display:'flex',gap:4}}>
-                          <input type="text" defaultValue={s.tkUrl||''} placeholder="URL" style={{width:80,padding:'4px 6px',borderRadius:5,border:'1px solid var(--bd)',background:'var(--bg-1)',color:'var(--tx-1)',fontSize:10}} onKeyDown={e=>{if(e.key==='Enter')saveTkUrl(s.id,e.target.value);if(e.key==='Escape')setEditSong(null)}} autoFocus/>
-                          <button onClick={e=>saveTkUrl(s.id,e.target.previousSibling.value)} style={{padding:'4px 8px',borderRadius:4,border:'none',background:'var(--grn)',color:'#fff',fontSize:10,cursor:'pointer'}}>✓</button>
+                          <input type="text" defaultValue={s.tkUrl||''} placeholder="URL" style={{width:70,padding:'4px 6px',borderRadius:5,border:'1px solid var(--bd)',background:'var(--bg-1)',color:'var(--tx-1)',fontSize:9}} onKeyDown={e=>{if(e.key==='Enter')saveTkUrl(s.id,e.target.value);if(e.key==='Escape')setEditSong(null)}} autoFocus/>
+                          <button onClick={e=>saveTkUrl(s.id,e.target.previousSibling.value)} style={{padding:'4px 6px',borderRadius:4,border:'none',background:'var(--grn)',color:'#fff',fontSize:9,cursor:'pointer'}}>✓</button>
                         </div>
                       ):(
-                        <button onClick={()=>setEditSong(s.id)} style={{padding:'4px 8px',borderRadius:5,border:'1px solid var(--bd)',background:s.tkUrl?'var(--grn-l)':'transparent',color:s.tkUrl?'var(--grn)':'var(--tx-3)',fontSize:11,cursor:'pointer'}}>{s.tkUrl?'🎵 Linked':'+ Link'}</button>
+                        <button onClick={()=>setEditSong(s.id)} style={{padding:'3px 6px',borderRadius:5,border:'1px solid var(--bd)',background:s.tkUrl?'var(--grn-l)':'transparent',color:s.tkUrl?'var(--grn)':'var(--tx-3)',fontSize:10,cursor:'pointer'}}>{s.tkUrl?'🎵':'+ TK'}</button>
                       ))}
-                      {isYouTube && <span style={{color:'var(--tx-3)',fontSize:10}}>YT Video</span>}
+                      {isYouTube && <span style={{color:'var(--tx-3)',fontSize:9}}>—</span>}
+                    </div>
+                    {/* Instagram Sound Link */}
+                    <div>
+                      {!isYouTube && (editIgUrl===s.id?(
+                        <div style={{display:'flex',gap:4}}>
+                          <input type="text" defaultValue={s.igUrl||''} placeholder="URL" style={{width:70,padding:'4px 6px',borderRadius:5,border:'1px solid var(--bd)',background:'var(--bg-1)',color:'var(--tx-1)',fontSize:9}} onKeyDown={e=>{if(e.key==='Enter')saveIgUrl(s.id,e.target.value);if(e.key==='Escape')setEditIgUrl(null)}} autoFocus/>
+                          <button onClick={e=>saveIgUrl(s.id,e.target.previousSibling.value)} style={{padding:'4px 6px',borderRadius:4,border:'none',background:'#E1306C',color:'#fff',fontSize:9,cursor:'pointer'}}>✓</button>
+                        </div>
+                      ):(
+                        <button onClick={()=>setEditIgUrl(s.id)} style={{padding:'3px 6px',borderRadius:5,border:'1px solid var(--bd)',background:s.igUrl?'#E1306C22':'transparent',color:s.igUrl?'#E1306C':'var(--tx-3)',fontSize:10,cursor:'pointer'}}>{s.igUrl?'📷':'+ IG'}</button>
+                      ))}
+                      {isYouTube && <span style={{color:'var(--tx-3)',fontSize:9}}>—</span>}
                     </div>
                     <div style={{textAlign:'center'}}>
                       <button onClick={()=>delSong(s.id)} style={{padding:4,borderRadius:5,border:'none',background:'transparent',color:'var(--tx-3)',cursor:'pointer'}}>{I.trash}</button>
@@ -687,34 +729,32 @@ function Detail({artist:a,onSave,onDel,onBack,onStatClick}){
                       <button onClick={()=>delSong(s.id)} style={{padding:6,borderRadius:5,border:'none',background:'transparent',color:'var(--tx-3)',cursor:'pointer'}}>{I.trash}</button>
                     </div>
                     {!isYouTube && (
-                      <div style={{display:'flex',gap:8,flexWrap:'wrap'}}>
+                      <div style={{display:'flex',gap:6,flexWrap:'wrap'}}>
+                        {/* TikTok UGC */}
                         {editUGC===s.id?(
-                          <div style={{display:'flex',gap:4,flex:'1 1 120px'}}>
-                            <input type="number" defaultValue={m.ug||0} placeholder="UGC" style={{flex:1,padding:'8px 10px',borderRadius:6,border:'1px solid var(--bd)',background:'var(--bg-1)',color:'var(--tx-1)',fontSize:14}} onKeyDown={e=>{if(e.key==='Enter')saveUGC(s.id,e.target.value);if(e.key==='Escape')setEditUGC(null)}} autoFocus/>
+                          <div style={{display:'flex',gap:4,flex:'1 1 100px'}}>
+                            <input type="number" defaultValue={m.ug||0} placeholder="TK" style={{flex:1,padding:'8px 10px',borderRadius:6,border:'1px solid var(--bd)',background:'var(--bg-1)',color:'var(--tx-1)',fontSize:14}} onKeyDown={e=>{if(e.key==='Enter')saveUGC(s.id,e.target.value);if(e.key==='Escape')setEditUGC(null)}} autoFocus/>
                             <button onClick={e=>saveUGC(s.id,e.target.previousSibling.value)} style={{padding:'8px 12px',borderRadius:6,border:'none',background:'var(--grn)',color:'#fff',fontSize:12,cursor:'pointer'}}>✓</button>
                           </div>
                         ):(
-                          <button onClick={()=>setEditUGC(s.id)} style={{display:'flex',alignItems:'center',gap:6,padding:'8px 12px',borderRadius:8,border:'1px solid var(--bd)',background:m.ug>0?'var(--prp-l)':'var(--bg-3)',color:m.ug>0?'var(--prp)':'var(--tx-3)',fontSize:13,fontWeight:600,cursor:'pointer'}}>
-                            {I.fire}UGC: <span className="mono">{m.ug||0}</span>
+                          <button onClick={()=>setEditUGC(s.id)} style={{display:'flex',alignItems:'center',gap:4,padding:'8px 10px',borderRadius:8,border:'1px solid var(--bd)',background:m.ug>0?'var(--prp-l)':'var(--bg-3)',color:m.ug>0?'var(--prp)':'var(--tx-3)',fontSize:12,fontWeight:600,cursor:'pointer'}}>
+                            {I.tk}<span className="mono">{m.ug||0}</span>
                           </button>
                         )}
-                        {editSong===s.id?(
-                          <div style={{display:'flex',gap:4,flex:'1 1 200px'}}>
-                            <input type="text" defaultValue={s.tkUrl||''} placeholder="TikTok sound URL" style={{flex:1,padding:'8px 10px',borderRadius:6,border:'1px solid var(--bd)',background:'var(--bg-1)',color:'var(--tx-1)',fontSize:12}} onKeyDown={e=>{if(e.key==='Enter')saveTkUrl(s.id,e.target.value);if(e.key==='Escape')setEditSong(null)}} autoFocus/>
-                            <button onClick={e=>saveTkUrl(s.id,e.target.previousSibling.value)} style={{padding:'8px 12px',borderRadius:6,border:'none',background:'var(--grn)',color:'#fff',fontSize:12,cursor:'pointer'}}>✓</button>
+                        {/* Instagram UGC */}
+                        {editIgUGC===s.id?(
+                          <div style={{display:'flex',gap:4,flex:'1 1 100px'}}>
+                            <input type="number" defaultValue={m.igu||0} placeholder="IG" style={{flex:1,padding:'8px 10px',borderRadius:6,border:'1px solid var(--bd)',background:'var(--bg-1)',color:'var(--tx-1)',fontSize:14}} onKeyDown={e=>{if(e.key==='Enter')saveIgUGC(s.id,e.target.value);if(e.key==='Escape')setEditIgUGC(null)}} autoFocus/>
+                            <button onClick={e=>saveIgUGC(s.id,e.target.previousSibling.value)} style={{padding:'8px 12px',borderRadius:6,border:'none',background:'#E1306C',color:'#fff',fontSize:12,cursor:'pointer'}}>✓</button>
                           </div>
                         ):(
-                          s.tkUrl?(
-                            <div style={{display:'flex',gap:4}}>
-                              <a href={s.tkUrl} target="_blank" rel="noopener" style={{display:'flex',alignItems:'center',gap:6,padding:'8px 12px',borderRadius:8,background:'var(--grn-l)',color:'var(--grn)',fontSize:12,fontWeight:500,textDecoration:'none'}}>
-                                {I.tk}Open in TikTok
-                              </a>
-                              <button onClick={()=>setEditSong(s.id)} style={{padding:'8px',borderRadius:6,border:'1px solid var(--bd)',background:'transparent',color:'var(--tx-3)',cursor:'pointer'}}>{I.edit}</button>
-                            </div>
-                          ):(
-                            <button onClick={()=>setEditSong(s.id)} style={{display:'flex',alignItems:'center',gap:4,padding:'8px 12px',borderRadius:8,border:'1px dashed var(--bd)',background:'transparent',color:'var(--tx-3)',fontSize:12,cursor:'pointer'}}>{I.tk}Add Sound Link</button>
-                          )
+                          <button onClick={()=>setEditIgUGC(s.id)} style={{display:'flex',alignItems:'center',gap:4,padding:'8px 10px',borderRadius:8,border:'1px solid var(--bd)',background:m.igu>0?'#E1306C22':'var(--bg-3)',color:m.igu>0?'#E1306C':'var(--tx-3)',fontSize:12,fontWeight:600,cursor:'pointer'}}>
+                            {I.ig}<span className="mono">{m.igu||0}</span>
+                          </button>
                         )}
+                        {/* Sound links */}
+                        {s.tkUrl&&<a href={s.tkUrl} target="_blank" rel="noopener" style={{display:'flex',alignItems:'center',gap:4,padding:'8px 10px',borderRadius:8,background:'var(--grn-l)',color:'var(--grn)',fontSize:11,fontWeight:500,textDecoration:'none'}}>{I.tk}TK</a>}
+                        {s.igUrl&&<a href={s.igUrl} target="_blank" rel="noopener" style={{display:'flex',alignItems:'center',gap:4,padding:'8px 10px',borderRadius:8,background:'#E1306C22',color:'#E1306C',fontSize:11,fontWeight:500,textDecoration:'none'}}>{I.ig}IG</a>}
                       </div>
                     )}
                   </div>
