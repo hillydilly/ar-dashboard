@@ -180,7 +180,35 @@ function StatsModal({title,artist,type,onClose}){
       return{total,daily,weekly:0,desc:'Total TikTok videos using artist sounds. Tap UGC count on songs to update manually.'};
     }
     if(type==='social'){
-      return{total:a.m?.ss||0,daily:0,weekly:0,tkPosts:a.m?.tp||0,igPosts:a.m?.ip||0,desc:'Social Score based on TikTok and Instagram posting consistency (0-10 scale)'};
+      // Calculate posts per day/week/month from history
+      const getPostVelocity = (history, days) => {
+        if (!history || history.length < 2) return 0;
+        const sorted = [...history].sort((a,b) => a.d.localeCompare(b.d));
+        const latest = sorted[sorted.length - 1];
+        const targetDate = new Date();
+        targetDate.setDate(targetDate.getDate() - days);
+        const targetStr = targetDate.toISOString().split('T')[0];
+        let oldEntry = sorted.find(h => h.d <= targetStr);
+        if (!oldEntry) oldEntry = sorted[0];
+        return Math.max(0, (latest.v || 0) - (oldEntry.v || 0));
+      };
+      
+      const tkTotal = a.m?.tpt || 0;
+      const igTotal = a.m?.ipt || 0;
+      const tkDay = getPostVelocity(a.h?.tpt, 1);
+      const tkWeek = getPostVelocity(a.h?.tpt, 7);
+      const tkMonth = getPostVelocity(a.h?.tpt, 30);
+      const igDay = getPostVelocity(a.h?.ipt, 1);
+      const igWeek = getPostVelocity(a.h?.ipt, 7);
+      const igMonth = getPostVelocity(a.h?.ipt, 30);
+      
+      return{
+        total: a.m?.ss || 0,
+        tkTotal, igTotal,
+        tkDay, tkWeek, tkMonth,
+        igDay, igWeek, igMonth,
+        desc:'Social Score based on TikTok and Instagram posting consistency (0-10 scale). Run extension daily to track posting velocity.'
+      };
     }
     return{total:0,daily:0,weekly:0,desc:''};
   },[artist,type]);
@@ -196,19 +224,28 @@ function StatsModal({title,artist,type,onClose}){
           <p style={{fontSize:12,color:'var(--tx-3)',marginBottom:16,lineHeight:1.5}}>{data.desc}</p>
           
           {/* Main stats */}
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10,marginBottom:16}}>
-            <div style={{padding:12,borderRadius:10,background:'var(--bg-3)',textAlign:'center'}}>
-              <div style={{fontSize:10,color:'var(--tx-3)',textTransform:'uppercase',marginBottom:4}}>All Time</div>
-              <div className="mono" style={{fontSize:20,fontWeight:700}}>{type==='social'?data.total:fmt(data.total)}</div>
-            </div>
-            <div style={{padding:12,borderRadius:10,background:'var(--bg-3)',textAlign:'center'}}>
-              <div style={{fontSize:10,color:'var(--tx-3)',textTransform:'uppercase',marginBottom:4}}>This Week</div>
-              <div className="mono" style={{fontSize:20,fontWeight:700,color:data.weekly>=0?'var(--grn)':'var(--red)'}}>{fmtD(data.weekly)}</div>
-            </div>
-            <div style={{padding:12,borderRadius:10,background:'var(--bg-3)',textAlign:'center'}}>
-              <div style={{fontSize:10,color:'var(--tx-3)',textTransform:'uppercase',marginBottom:4}}>Today</div>
-              <div className="mono" style={{fontSize:20,fontWeight:700,color:data.daily>=0?'var(--grn)':'var(--red)'}}>{fmtD(data.daily)}</div>
-            </div>
+          <div style={{display:'grid',gridTemplateColumns:type==='social'?'1fr':'1fr 1fr 1fr',gap:10,marginBottom:16}}>
+            {type==='social'?(
+              <div style={{padding:16,borderRadius:10,background:'var(--acc-l)',textAlign:'center'}}>
+                <div style={{fontSize:10,color:'var(--acc)',textTransform:'uppercase',marginBottom:4}}>Social Score</div>
+                <div className="mono" style={{fontSize:32,fontWeight:700,color:'var(--acc)'}}>{data.total}/10</div>
+              </div>
+            ):(
+              <>
+                <div style={{padding:12,borderRadius:10,background:'var(--bg-3)',textAlign:'center'}}>
+                  <div style={{fontSize:10,color:'var(--tx-3)',textTransform:'uppercase',marginBottom:4}}>All Time</div>
+                  <div className="mono" style={{fontSize:20,fontWeight:700}}>{fmt(data.total)}</div>
+                </div>
+                <div style={{padding:12,borderRadius:10,background:'var(--bg-3)',textAlign:'center'}}>
+                  <div style={{fontSize:10,color:'var(--tx-3)',textTransform:'uppercase',marginBottom:4}}>This Week</div>
+                  <div className="mono" style={{fontSize:20,fontWeight:700,color:data.weekly>=0?'var(--grn)':'var(--red)'}}>{fmtD(data.weekly)}</div>
+                </div>
+                <div style={{padding:12,borderRadius:10,background:'var(--bg-3)',textAlign:'center'}}>
+                  <div style={{fontSize:10,color:'var(--tx-3)',textTransform:'uppercase',marginBottom:4}}>Today</div>
+                  <div className="mono" style={{fontSize:20,fontWeight:700,color:data.daily>=0?'var(--grn)':'var(--red)'}}>{fmtD(data.daily)}</div>
+                </div>
+              </>
+            )}
           </div>
 
           {/* DSP Breakdown for streams - Spotify + YouTube */}
@@ -239,16 +276,42 @@ function StatsModal({title,artist,type,onClose}){
           {/* Social score breakdown */}
           {type==='social'&&(
             <div>
-              <h3 style={{fontSize:12,fontWeight:600,color:'var(--tx-2)',marginBottom:10}}>Posting Activity</h3>
-              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+              <h3 style={{fontSize:12,fontWeight:600,color:'var(--tx-2)',marginBottom:10}}>Total Posts</h3>
+              <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:16}}>
                 <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 12px',borderRadius:8,background:'var(--bg-3)'}}>
-                  <div style={{display:'flex',alignItems:'center',gap:6}}>{I.tk}<span style={{fontSize:12}}>TikTok/wk</span></div>
-                  <span className="mono" style={{fontWeight:600}}>{data.tkPosts||0}</span>
+                  <div style={{display:'flex',alignItems:'center',gap:6}}>{I.tk}<span style={{fontSize:12}}>TikTok</span></div>
+                  <span className="mono" style={{fontWeight:600}}>{fmt(data.tkTotal)}</span>
                 </div>
                 <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'10px 12px',borderRadius:8,background:'var(--bg-3)'}}>
-                  <div style={{display:'flex',alignItems:'center',gap:6}}>{I.ig}<span style={{fontSize:12}}>IG/wk</span></div>
-                  <span className="mono" style={{fontWeight:600}}>{data.igPosts||0}</span>
+                  <div style={{display:'flex',alignItems:'center',gap:6}}>{I.ig}<span style={{fontSize:12}}>Instagram</span></div>
+                  <span className="mono" style={{fontWeight:600}}>{fmt(data.igTotal)}</span>
                 </div>
+              </div>
+              
+              <h3 style={{fontSize:12,fontWeight:600,color:'var(--tx-2)',marginBottom:10}}>Posting Velocity</h3>
+              <div style={{background:'var(--bg-3)',borderRadius:10,overflow:'hidden'}}>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',gap:1,background:'var(--bd)'}}>
+                  <div style={{padding:'8px',background:'var(--bg-3)',fontSize:10,color:'var(--tx-3)',textTransform:'uppercase'}}></div>
+                  <div style={{padding:'8px',background:'var(--bg-3)',fontSize:10,color:'var(--tx-3)',textTransform:'uppercase',textAlign:'center'}}>Day</div>
+                  <div style={{padding:'8px',background:'var(--bg-3)',fontSize:10,color:'var(--tx-3)',textTransform:'uppercase',textAlign:'center'}}>Week</div>
+                  <div style={{padding:'8px',background:'var(--bg-3)',fontSize:10,color:'var(--tx-3)',textTransform:'uppercase',textAlign:'center'}}>Month</div>
+                </div>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',gap:1,background:'var(--bd)'}}>
+                  <div style={{padding:'10px 8px',background:'var(--bg-2)',display:'flex',alignItems:'center',gap:4}}>{I.tk}<span style={{fontSize:11}}>TikTok</span></div>
+                  <div className="mono" style={{padding:'10px 8px',background:'var(--bg-2)',textAlign:'center',fontWeight:600,color:data.tkDay>0?'var(--grn)':'var(--tx-3)'}}>{data.tkDay||'—'}</div>
+                  <div className="mono" style={{padding:'10px 8px',background:'var(--bg-2)',textAlign:'center',fontWeight:600,color:data.tkWeek>0?'var(--grn)':'var(--tx-3)'}}>{data.tkWeek||'—'}</div>
+                  <div className="mono" style={{padding:'10px 8px',background:'var(--bg-2)',textAlign:'center',fontWeight:600,color:data.tkMonth>0?'var(--grn)':'var(--tx-3)'}}>{data.tkMonth||'—'}</div>
+                </div>
+                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr 1fr',gap:1,background:'var(--bd)'}}>
+                  <div style={{padding:'10px 8px',background:'var(--bg-2)',display:'flex',alignItems:'center',gap:4}}>{I.ig}<span style={{fontSize:11}}>Instagram</span></div>
+                  <div className="mono" style={{padding:'10px 8px',background:'var(--bg-2)',textAlign:'center',fontWeight:600,color:data.igDay>0?'var(--grn)':'var(--tx-3)'}}>{data.igDay||'—'}</div>
+                  <div className="mono" style={{padding:'10px 8px',background:'var(--bg-2)',textAlign:'center',fontWeight:600,color:data.igWeek>0?'var(--grn)':'var(--tx-3)'}}>{data.igWeek||'—'}</div>
+                  <div className="mono" style={{padding:'10px 8px',background:'var(--bg-2)',textAlign:'center',fontWeight:600,color:data.igMonth>0?'var(--grn)':'var(--tx-3)'}}>{data.igMonth||'—'}</div>
+                </div>
+              </div>
+              
+              <div style={{marginTop:12,padding:10,borderRadius:8,background:'var(--acc-l)',fontSize:11,color:'var(--acc)'}}>
+                💡 Velocity is calculated from post count history. Run the extension daily for accurate tracking.
               </div>
             </div>
           )}
