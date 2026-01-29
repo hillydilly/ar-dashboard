@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f172a"/>
+      <stop offset="100%" style="stop-color:#1e293b"/>
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3b82f6"/>
+      <stop offset="100%" style="stop-color:#8b5cf6"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  
+  <!-- Grid pattern -->
+  <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
+    <path d="M 60 0 L 0 0 0 60" fill="none" stroke="#ffffff" stroke-width="0.5" opacity="0.05"/>
+  </pattern>
+  <rect width="1200" height="630" fill="url(#grid)"/>
+  
+  <!-- Logo -->
+  <rect x="80" y="200" width="140" height="140" rx="30" fill="url(#accent)"/>
+  <text x="150" y="295" text-anchor="middle" fill="white" font-family="system-ui, -apple-system, sans-serif" font-weight="bold" font-size="55">A&amp;R</text>
+  
+  <!-- Title -->
+  <text x="260" y="255" fill="white" font-family="system-ui, -apple-system, sans-serif" font-weight="bold" font-size="72">Scouting Dashboard</text>
+  
+  <!-- Subtitle -->
+  <text x="260" y="320" fill="#94a3b8" font-family="system-ui, -apple-system, sans-serif" font-weight="500" font-size="28">Track artist metrics across Spotify, TikTok, Instagram &amp; YouTube</text>
+  
+  <!-- Platform icons row -->
+  <g transform="translate(260, 380)">
+    <!-- Spotify -->
+    <circle cx="30" cy="30" r="30" fill="#1DB954"/>
+    <text x="30" y="38" text-anchor="middle" fill="white" font-size="24">♪</text>
+    
+    <!-- TikTok -->
+    <circle cx="110" cy="30" r="30" fill="#000000" stroke="#ffffff" stroke-width="2"/>
+    <text x="110" y="38" text-anchor="middle" fill="white" font-size="20">♫</text>
+    
+    <!-- Instagram -->
+    <circle cx="190" cy="30" r="30" fill="#E1306C"/>
+    <text x="190" y="38" text-anchor="middle" fill="white" font-size="24">📷</text>
+    
+    <!-- YouTube -->
+    <circle cx="270" cy="30" r="30" fill="#FF0000"/>
+    <text x="270" y="38" text-anchor="middle" fill="white" font-size="24">▶</text>
+  </g>
+  
+  <!-- Stats preview -->
+  <g transform="translate(600, 380)">
+    <rect x="0" y="0" width="140" height="80" rx="12" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+    <text x="15" y="25" fill="#64748b" font-family="system-ui" font-size="12" font-weight="600">STREAMS</text>
+    <text x="15" y="55" fill="#10b981" font-family="monospace" font-size="24" font-weight="700">2.4M</text>
+    
+    <rect x="160" y="0" width="140" height="80" rx="12" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+    <text x="175" y="25" fill="#64748b" font-family="system-ui" font-size="12" font-weight="600">FOLLOWERS</text>
+    <text x="175" y="55" fill="#3b82f6" font-family="monospace" font-size="24" font-weight="700">156K</text>
+    
+    <rect x="320" y="0" width="140" height="80" rx="12" fill="#1e293b" stroke="#334155" stroke-width="1"/>
+    <text x="335" y="25" fill="#64748b" font-family="system-ui" font-size="12" font-weight="600">UGC</text>
+    <text x="335" y="55" fill="#8b5cf6" font-family="monospace" font-size="24" font-weight="700">8.2K</text>
+  </g>
+  
+  <!-- Bottom accent line -->
+  <rect x="0" y="620" width="1200" height="10" fill="url(#accent)"/>
+</svg>
