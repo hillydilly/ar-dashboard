@@ -64,7 +64,7 @@ const{useState,useEffect,useMemo}=React;
 // Utilities
 const fmt=n=>{if(!n||n===0)return'0';if(n>=1e9)return(n/1e9).toFixed(1)+'B';if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).toFixed(1)+'K';return n.toLocaleString()};
 const fmtD=n=>{if(!n||n===0)return'0';const a=Math.abs(n),p=n>=0?'+':'-';if(a>=1e6)return p+(a/1e6).toFixed(1)+'M';if(a>=1e3)return p+(a/1e3).toFixed(1)+'K';return p+a.toLocaleString()};
-const vel=(h,d=1)=>{if(!h||h.length<2)return 0;return(h[h.length-1]?.v||0)-(h[Math.max(0,h.length-1-d)]?.v||0)};
+const vel=(h,d=1)=>{if(!h||h.length<2)return null;return(h[h.length-1]?.v||0)-(h[Math.max(0,h.length-1-d)]?.v||0)};
 const timeAgo=d=>{if(!d)return'Never';const now=new Date(),then=new Date(d),diff=Math.floor((now-then)/1000);if(diff<60)return'Just now';if(diff<3600)return Math.floor(diff/60)+'m ago';if(diff<86400)return Math.floor(diff/3600)+'h ago';return Math.floor(diff/86400)+'d ago';};
 
 // Stream calculations - Spotify + YouTube views per song
@@ -74,10 +74,10 @@ const totStr=a=>getSpotifyStreams(a)+getYTViews(a);
 const totTkUGC=a=>a.sm?Object.values(a.sm).reduce((s,x)=>s+(x.ug||0),0):0;
 const totIgUGC=a=>a.sm?Object.values(a.sm).reduce((s,x)=>s+(x.igu||0),0):0;
 const totUGC=a=>totTkUGC(a)+totIgUGC(a);
-const dayStr=a=>a.sm?Object.values(a.sm).reduce((s,x)=>s+vel(x.h?.st,1)+vel(x.h?.yt,1),0):0;
-const weekStr=a=>a.sm?Object.values(a.sm).reduce((s,x)=>s+vel(x.h?.st,7)+vel(x.h?.yt,7),0):0;
-const dayTkUGC=a=>a.sm?Object.values(a.sm).reduce((s,x)=>s+vel(x.h?.ug,1),0):0;
-const dayIgUGC=a=>a.sm?Object.values(a.sm).reduce((s,x)=>s+vel(x.h?.igu,1),0):0;
+const dayStr=a=>a.sm?Object.values(a.sm).reduce((s,x)=>s+(vel(x.h?.st,1)||0)+(vel(x.h?.yt,1)||0),0):0;
+const weekStr=a=>a.sm?Object.values(a.sm).reduce((s,x)=>s+(vel(x.h?.st,7)||0)+(vel(x.h?.yt,7)||0),0):0;
+const dayTkUGC=a=>a.sm?Object.values(a.sm).reduce((s,x)=>s+(vel(x.h?.ug,1)||0),0):0;
+const dayIgUGC=a=>a.sm?Object.values(a.sm).reduce((s,x)=>s+(vel(x.h?.igu,1)||0),0):0;
 const dayUGC=a=>dayTkUGC(a)+dayIgUGC(a);
 
 // Get last updated timestamp from artist data
@@ -146,6 +146,7 @@ const Spark=({data,h=26})=>{
 };
 
 const Delta=({v,sz='md'})=>{
+  if(v===null||v===undefined)return<span style={{color:'var(--tx-3)',fontSize:sz==='sm'?11:12}}>—</span>;
   const pos=v>=0,zero=v===0;
   const s={sm:{fs:11,p:'2px 6px'},md:{fs:12,p:'3px 8px'}}[sz];
   return<span className="mono" style={{display:'inline-flex',alignItems:'center',gap:2,padding:s.p,borderRadius:6,fontSize:s.fs,fontWeight:600,background:zero?'var(--bg-3)':pos?'var(--grn-l)':'var(--red-l)',color:zero?'var(--tx-3)':pos?'var(--grn)':'var(--red)'}}>{!zero&&(pos?I.up:I.down)}{fmtD(v)}</span>;
@@ -314,11 +315,11 @@ function StatsModal({title,artist,type,onClose}){
                 </div>
                 <div style={{padding:12,borderRadius:10,background:'var(--bg-3)',textAlign:'center'}}>
                   <div style={{fontSize:10,color:'var(--tx-3)',textTransform:'uppercase',marginBottom:4}}>This Week</div>
-                  <div className="mono" style={{fontSize:20,fontWeight:700,color:data.weekly>=0?'var(--grn)':'var(--red)'}}>{fmtD(data.weekly)}</div>
+                  <div className="mono" style={{fontSize:20,fontWeight:700,color:data.weekly===null?'var(--tx-3)':data.weekly>=0?'var(--grn)':'var(--red)'}}>{data.weekly===null?'—':fmtD(data.weekly)}</div>
                 </div>
                 <div style={{padding:12,borderRadius:10,background:'var(--bg-3)',textAlign:'center'}}>
                   <div style={{fontSize:10,color:'var(--tx-3)',textTransform:'uppercase',marginBottom:4}}>Today</div>
-                  <div className="mono" style={{fontSize:20,fontWeight:700,color:data.daily>=0?'var(--grn)':'var(--red)'}}>{fmtD(data.daily)}</div>
+                  <div className="mono" style={{fontSize:20,fontWeight:700,color:data.daily===null?'var(--tx-3)':data.daily>=0?'var(--grn)':'var(--red)'}}>{data.daily===null?'—':fmtD(data.daily)}</div>
                 </div>
               </>
             )}
@@ -842,15 +843,15 @@ function Detail({artist:a,onSave,onDel,onBack,onStatClick}){
                       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8}}>
                         <div style={{textAlign:'center',padding:8,background:'var(--bg-2)',borderRadius:8}}>
                           <div style={{fontSize:9,color:'var(--tx-3)',marginBottom:2}}>TODAY</div>
-                          <div className="mono" style={{fontSize:14,fontWeight:600,color:daily>=0?'var(--grn)':'var(--red)'}}>{fmtD(daily)}</div>
+                          <div className="mono" style={{fontSize:14,fontWeight:600,color:daily===null?'var(--tx-3)':daily>=0?'var(--grn)':'var(--red)'}}>{daily===null?'—':fmtD(daily)}</div>
                         </div>
                         <div style={{textAlign:'center',padding:8,background:'var(--bg-2)',borderRadius:8}}>
                           <div style={{fontSize:9,color:'var(--tx-3)',marginBottom:2}}>WEEK</div>
-                          <div className="mono" style={{fontSize:14,fontWeight:600,color:vel(isYouTube?m.h?.yt:m.h?.st,7)>=0?'var(--grn)':'var(--red)'}}>{fmtD(vel(isYouTube?m.h?.yt:m.h?.st,7))}</div>
+                          <div className="mono" style={{fontSize:14,fontWeight:600,color:(()=>{const v=vel(isYouTube?m.h?.yt:m.h?.st,7);return v===null?'var(--tx-3)':v>=0?'var(--grn)':'var(--red)';})()}}>{(()=>{const v=vel(isYouTube?m.h?.yt:m.h?.st,7);return v===null?'—':fmtD(v);})()}</div>
                         </div>
                         <div style={{textAlign:'center',padding:8,background:'var(--bg-2)',borderRadius:8}}>
                           <div style={{fontSize:9,color:'var(--tx-3)',marginBottom:2}}>MONTH</div>
-                          <div className="mono" style={{fontSize:14,fontWeight:600,color:vel(isYouTube?m.h?.yt:m.h?.st,30)>=0?'var(--grn)':'var(--red)'}}>{fmtD(vel(isYouTube?m.h?.yt:m.h?.st,30))}</div>
+                          <div className="mono" style={{fontSize:14,fontWeight:600,color:(()=>{const v=vel(isYouTube?m.h?.yt:m.h?.st,30);return v===null?'var(--tx-3)':v>=0?'var(--grn)':'var(--red)';})()}}>{(()=>{const v=vel(isYouTube?m.h?.yt:m.h?.st,30);return v===null?'—':fmtD(v);})()}</div>
                         </div>
                       </div>
                     </div>
