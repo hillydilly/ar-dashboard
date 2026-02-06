@@ -787,7 +787,16 @@ function Detail({artist:a,onSave,onDel,onBack,onStatClick}){
               <span style={{textAlign:'center'}}>Instagram UGC</span>
               <span></span>
             </div>
-            {a.sg.map(s=>{
+            {[...a.sg].sort((x,y)=>{
+              // Spotify songs first (src !== 'yt'), then YouTube (src === 'yt')
+              const xIsYt = x.src === 'yt' ? 1 : 0;
+              const yIsYt = y.src === 'yt' ? 1 : 0;
+              if (xIsYt !== yIsYt) return xIsYt - yIsYt;
+              // Within same type, sort by streams descending
+              const xStreams = a.sm?.[x.id]?.[x.src === 'yt' ? 'yt' : 'st'] || 0;
+              const yStreams = a.sm?.[y.id]?.[y.src === 'yt' ? 'yt' : 'st'] || 0;
+              return yStreams - xStreams;
+            }).map(s=>{
               const m=a.sm?.[s.id]||{};
               const isYouTube = s.src === 'yt';
               const streams = isYouTube ? (m.yt||0) : (m.st||0);
