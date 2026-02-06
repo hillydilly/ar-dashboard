@@ -70,7 +70,28 @@ const{useState,useEffect,useMemo}=React;
 // Utilities
 const fmt=n=>{if(!n||n===0)return'0';if(n>=1e9)return(n/1e9).toFixed(1)+'B';if(n>=1e6)return(n/1e6).toFixed(1)+'M';if(n>=1e3)return(n/1e3).toFixed(1)+'K';return n.toLocaleString()};
 const fmtD=n=>{if(!n||n===0)return'0';const a=Math.abs(n),p=n>=0?'+':'-';if(a>=1e6)return p+(a/1e6).toFixed(1)+'M';if(a>=1e3)return p+(a/1e3).toFixed(1)+'K';return p+a.toLocaleString()};
-const vel=(h,d=1)=>{if(!h||h.length<2)return null;return(h[h.length-1]?.v||0)-(h[Math.max(0,h.length-1-d)]?.v||0)};
+const vel=(h,days=1)=>{
+  if(!h||h.length<2)return null;
+  // Sort by date
+  const sorted=[...h].sort((a,b)=>a.d.localeCompare(b.d));
+  const latest=sorted[sorted.length-1];
+  // For "today" (days=1), compare with previous entry
+  if(days===1){
+    const prev=sorted[sorted.length-2];
+    if(!prev)return null;
+    return(latest.v||0)-(prev.v||0);
+  }
+  // For week/month, find entry from X days ago
+  const targetDate=new Date();
+  targetDate.setDate(targetDate.getDate()-days);
+  const targetStr=targetDate.toISOString().split('T')[0];
+  let oldEntry=null;
+  for(let i=sorted.length-1;i>=0;i--){
+    if(sorted[i].d<=targetStr){oldEntry=sorted[i];break;}
+  }
+  if(!oldEntry)oldEntry=sorted[0];
+  return(latest.v||0)-(oldEntry.v||0);
+};
 const timeAgo=d=>{if(!d)return'Never';const now=new Date(),then=new Date(d),diff=Math.floor((now-then)/1000);if(diff<60)return'Just now';if(diff<3600)return Math.floor(diff/60)+'m ago';if(diff<86400)return Math.floor(diff/3600)+'h ago';return Math.floor(diff/86400)+'d ago';};
 
 // Stream calculations - Spotify + YouTube views per song
