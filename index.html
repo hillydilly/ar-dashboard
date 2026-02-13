@@ -213,6 +213,23 @@ function StatsModal({title,artist,type,onClose}){
   
   const data=useMemo(()=>{
     const a=artist;
+    
+    // Helper to build aggregated history from song metrics
+    const buildAggregatedHistory = (sm, keys) => {
+      const dateMap = {};
+      if (!sm) return [];
+      Object.values(sm).forEach(song => {
+        keys.forEach(key => {
+          const hist = song.h?.[key] || [];
+          hist.forEach(h => {
+            if (!dateMap[h.d]) dateMap[h.d] = 0;
+            dateMap[h.d] += (h.v || 0);
+          });
+        });
+      });
+      return Object.entries(dateMap).map(([d, v]) => ({ d, v })).sort((a, b) => a.d.localeCompare(b.d));
+    };
+    
     if(type==='streams'){
       const spotify=getSpotifyStreams(a);
       const youtube=getYTViews(a);
@@ -220,7 +237,9 @@ function StatsModal({title,artist,type,onClose}){
       const daily=dayStr(a);
       const weekly=weekStr(a);
       const monthly=monthStr(a);
-      return{total,daily,weekly,monthly,spotify,youtube,desc:'Combined streams from Spotify and YouTube'};
+      // Build aggregated stream history from all songs
+      const history = buildAggregatedHistory(a.sm, ['st', 'yt']);
+      return{total,daily,weekly,monthly,spotify,youtube,history,desc:'Combined streams from Spotify and YouTube'};
     }
     if(type==='monthly'){
       const total=a.m?.ml||0;
@@ -265,7 +284,9 @@ function StatsModal({title,artist,type,onClose}){
       const monthlyTkUGC=a.sm?Object.values(a.sm).reduce((s,x)=>s+(vel(x.h?.ug,30)||0),0):0;
       const monthlyIgUGC=a.sm?Object.values(a.sm).reduce((s,x)=>s+(vel(x.h?.igu,30)||0),0):0;
       const monthly=monthlyTkUGC+monthlyIgUGC;
-      return{total,daily,weekly,monthly,tkUgc,igUgc,desc:'Total videos using artist sounds across TikTok and Instagram Reels.'};
+      // Build aggregated UGC history
+      const history = buildAggregatedHistory(a.sm, ['ug', 'igu']);
+      return{total,daily,weekly,monthly,tkUgc,igUgc,history,desc:'Total videos using artist sounds across TikTok and Instagram Reels.'};
     }
     if(type==='social'){
       // Get total posts from stored values
@@ -323,12 +344,37 @@ function StatsModal({title,artist,type,onClose}){
       const tkPostsWk = a.m?.tp || 0;
       const igPostsWk = a.m?.ip || 0;
       
+      // Build combined posting history for past months view
+      // We'll store weekly post counts per date
+      const buildPostingHistory = () => {
+        const dateMap = {};
+        const tkHist = a.h?.tpt || [];
+        const igHist = a.h?.ipt || [];
+        
+        tkHist.forEach(h => {
+          if (!dateMap[h.d]) dateMap[h.d] = { tk: 0, ig: 0 };
+          dateMap[h.d].tk = h.v || 0;
+        });
+        igHist.forEach(h => {
+          if (!dateMap[h.d]) dateMap[h.d] = { tk: 0, ig: 0 };
+          dateMap[h.d].ig = h.v || 0;
+        });
+        
+        // Convert to array with combined weekly posts
+        return Object.entries(dateMap)
+          .map(([d, v]) => ({ d, v: v.tk + v.ig, tk: v.tk, ig: v.ig }))
+          .sort((a, b) => a.d.localeCompare(b.d));
+      };
+      
+      const history = buildPostingHistory();
+      
       return{
         total: a.m?.ss || 0,
         tkTotal, igTotal,
         tkDay, tkWeek, tkMonth,
         igDay, igWeek, igMonth,
         tkPostsWk, igPostsWk,
+        history,
         desc:'Social Score based on TikTok and Instagram posting consistency (0-10 scale). Run extension daily to track posting velocity.'
       };
     }
@@ -375,7 +421,7 @@ function StatsModal({title,artist,type,onClose}){
           </div>
           
           {/* Past Months Dropdown */}
-          {type!=='social'&&data.history&&data.history.length>0&&(
+          {data.history&&data.history.length>0&&(
             <div style={{marginBottom:16}}>
               <button onClick={()=>setShowPastMonths(!showPastMonths)} style={{display:'flex',alignItems:'center',justifyContent:'space-between',width:'100%',padding:'10px 12px',borderRadius:8,border:'1px solid var(--bd)',background:'var(--bg-3)',color:'var(--tx-2)',fontSize:12,fontWeight:500,cursor:'pointer'}}>
                 <span>📅 View Past Months</span>
@@ -401,8 +447,8 @@ function StatsModal({title,artist,type,onClose}){
                         <div key={month} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 0',borderBottom:'1px solid var(--bd-l)'}}>
                           <span style={{fontSize:12,color:'var(--tx-2)'}}>{monthName}</span>
                           <div style={{textAlign:'right'}}>
-                            <span className="mono" style={{fontSize:12,fontWeight:600,color:change>=0?'var(--grn)':'var(--red)'}}>{fmtD(change)}</span>
-                            <span className="mono" style={{fontSize:10,color:'var(--tx-3)',marginLeft:8}}>({fmt(m.end)})</span>
+                            <span className="mono" style={{fontSize:12,fontWeight:600,color:change>=0?'var(--grn)':'var(--red)'}}>{type==='social'?'+'+change+' posts':fmtD(change)}</span>
+                            {type!=='social'&&<span className="mono" style={{fontSize:10,color:'var(--tx-3)',marginLeft:8}}>({fmt(m.end)})</span>}
                           </div>
                         </div>
                       );
