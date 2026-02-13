@@ -247,7 +247,11 @@ function StatsModal({title,artist,type,onClose}){
       const igUgc=totIgUGC(a);
       const total=tkUgc+igUgc;
       const daily=dayUGC(a);
-      return{total,daily,weekly:0,tkUgc,igUgc,desc:'Total videos using artist sounds across TikTok and Instagram Reels.'};
+      // Calculate weekly UGC change
+      const weeklyTkUGC=a.sm?Object.values(a.sm).reduce((s,x)=>s+(vel(x.h?.ug,7)||0),0):0;
+      const weeklyIgUGC=a.sm?Object.values(a.sm).reduce((s,x)=>s+(vel(x.h?.igu,7)||0),0):0;
+      const weekly=weeklyTkUGC+weeklyIgUGC;
+      return{total,daily,weekly,tkUgc,igUgc,desc:'Total videos using artist sounds across TikTok and Instagram Reels.'};
     }
     if(type==='social'){
       // Get total posts from stored values
