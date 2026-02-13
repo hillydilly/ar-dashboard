@@ -342,11 +342,11 @@ function StatsModal({title,artist,type,onClose}){
           <h2 style={{fontSize:16,fontWeight:600}}>{title}</h2>
           <button onClick={onClose} style={{padding:6,borderRadius:6,border:'none',background:'var(--bg-3)',color:'var(--tx-3)',cursor:'pointer'}}>{I.x}</button>
         </div>
-        <div style={{padding:18}}>
-          <p style={{fontSize:12,color:'var(--tx-3)',marginBottom:16,lineHeight:1.5}}>{data.desc}</p>
+        <div style={{padding:16}}>
+          <p style={{fontSize:12,color:'var(--tx-3)',marginBottom:14,lineHeight:1.5}}>{data.desc}</p>
           
-          {/* Main stats */}
-          <div style={{display:'grid',gridTemplateColumns:type==='social'?'1fr':'1fr 1fr 1fr 1fr',gap:8,marginBottom:16}}>
+          {/* Main stats - 2x2 grid for mobile friendliness */}
+          <div style={{display:'grid',gridTemplateColumns:type==='social'?'1fr':'1fr 1fr',gap:8,marginBottom:16}}>
             {type==='social'?(
               <div style={{padding:16,borderRadius:10,background:'var(--acc-l)',textAlign:'center'}}>
                 <div style={{fontSize:10,color:'var(--acc)',textTransform:'uppercase',marginBottom:4}}>Social Score</div>
@@ -354,21 +354,21 @@ function StatsModal({title,artist,type,onClose}){
               </div>
             ):(
               <>
-                <div style={{padding:10,borderRadius:10,background:'var(--bg-3)',textAlign:'center'}}>
+                <div style={{padding:12,borderRadius:10,background:'var(--bg-3)',textAlign:'center'}}>
                   <div style={{fontSize:9,color:'var(--tx-3)',textTransform:'uppercase',marginBottom:4}}>All Time</div>
-                  <div className="mono" style={{fontSize:16,fontWeight:700}}>{fmt(data.total)}</div>
+                  <div className="mono" style={{fontSize:18,fontWeight:700}}>{fmt(data.total)}</div>
                 </div>
-                <div style={{padding:10,borderRadius:10,background:'var(--bg-3)',textAlign:'center'}}>
+                <div style={{padding:12,borderRadius:10,background:'var(--bg-3)',textAlign:'center'}}>
                   <div style={{fontSize:9,color:'var(--tx-3)',textTransform:'uppercase',marginBottom:4}}>This Month</div>
-                  <div className="mono" style={{fontSize:16,fontWeight:700,color:data.monthly===null?'var(--tx-3)':data.monthly>=0?'var(--grn)':'var(--red)'}}>{data.monthly===null?'—':fmtD(data.monthly)}</div>
+                  <div className="mono" style={{fontSize:18,fontWeight:700,color:data.monthly===null?'var(--tx-3)':data.monthly>=0?'var(--grn)':'var(--red)'}}>{data.monthly===null?'—':fmtD(data.monthly)}</div>
                 </div>
-                <div style={{padding:10,borderRadius:10,background:'var(--bg-3)',textAlign:'center'}}>
+                <div style={{padding:12,borderRadius:10,background:'var(--bg-3)',textAlign:'center'}}>
                   <div style={{fontSize:9,color:'var(--tx-3)',textTransform:'uppercase',marginBottom:4}}>This Week</div>
-                  <div className="mono" style={{fontSize:16,fontWeight:700,color:data.weekly===null?'var(--tx-3)':data.weekly>=0?'var(--grn)':'var(--red)'}}>{data.weekly===null?'—':fmtD(data.weekly)}</div>
+                  <div className="mono" style={{fontSize:18,fontWeight:700,color:data.weekly===null?'var(--tx-3)':data.weekly>=0?'var(--grn)':'var(--red)'}}>{data.weekly===null?'—':fmtD(data.weekly)}</div>
                 </div>
-                <div style={{padding:10,borderRadius:10,background:'var(--bg-3)',textAlign:'center'}}>
+                <div style={{padding:12,borderRadius:10,background:'var(--bg-3)',textAlign:'center'}}>
                   <div style={{fontSize:9,color:'var(--tx-3)',textTransform:'uppercase',marginBottom:4}}>Today</div>
-                  <div className="mono" style={{fontSize:16,fontWeight:700,color:data.daily===null?'var(--tx-3)':data.daily>=0?'var(--grn)':'var(--red)'}}>{data.daily===null?'—':fmtD(data.daily)}</div>
+                  <div className="mono" style={{fontSize:18,fontWeight:700,color:data.daily===null?'var(--tx-3)':data.daily>=0?'var(--grn)':'var(--red)'}}>{data.daily===null?'—':fmtD(data.daily)}</div>
                 </div>
               </>
             )}
