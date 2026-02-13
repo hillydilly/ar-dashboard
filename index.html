@@ -441,7 +441,9 @@ function StatsModal({title,artist,type,onClose}){
                     const sortedMonths=Object.keys(months).sort().reverse();
                     return sortedMonths.map(month=>{
                       const m=months[month];
-                      const change=m.end-m.start;
+                      // For UGC and social, don't show negative (can't lose UGC/posts)
+                      const rawChange=m.end-m.start;
+                      const change=(type==='ugc'||type==='social')?Math.max(0,rawChange):rawChange;
                       const monthName=new Date(month+'-01').toLocaleDateString('en-US',{month:'long',year:'numeric'});
                       return(
                         <div key={month} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 0',borderBottom:'1px solid var(--bd-l)'}}>
