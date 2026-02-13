@@ -608,7 +608,10 @@ function Row({a,rank,onClick}){
         <span style={{display:'flex',alignItems:'center',justifyContent:'center',width:26,height:26,borderRadius:7,background:rank<=3?'var(--org-l)':'var(--bg-3)',color:rank<=3?'var(--org)':'var(--tx-3)',fontSize:11,fontWeight:700}}>{rank}</span>
         <div>
           <div style={{fontWeight:600,fontSize:13}}>{a.n}</div>
-          <div style={{fontSize:10,color:'var(--tx-3)'}}>{a.sg?.length||0} songs • {fmt(ts)} streams</div>
+          <div style={{fontSize:10,color:'var(--tx-3)'}}>
+            {a.sg?.length||0} songs • {fmt(ts)} streams
+            {dv!==0&&<span style={{color:dv>0?'var(--grn)':'var(--red)',fontWeight:600,marginLeft:4}}>{fmtD(dv)}</span>}
+          </div>
         </div>
       </div>
       <div className="mono hide-mobile" style={{textAlign:'right',fontWeight:600,fontSize:13,alignSelf:'center'}}>{fmt(ts)}</div>
